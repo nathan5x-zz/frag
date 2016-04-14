@@ -1,0 +1,343 @@
+<!DOCTYPE html> 
+<html>
+
+  <head>
+    <script type='text/javascript' src='D.js'></script>
+    <script type='text/javascript' src='bubble.js'></script>
+    <style type='text/css'>
+
+	html {
+	  box-sizing: border-box;
+	}
+	*, *:before, *:after {
+	  box-sizing: inherit;
+	}
+	
+	body {
+		font-family: 'Gotham Book', sans-serif;
+		background-color: rgb(250,250,250);
+		padding: 0;
+		margin: 8em 2em 2em 1em;
+		line-height: 1.5em;
+	}
+	.canvas {
+	   border: 1px solid rgb(229,229,229);
+	   background: rgb(239,239,239);
+	   margin-bottom: 3px;
+	   color: rgb(131,131,131);
+	   font-size: .875em;
+	}
+	.canvas.body {
+		max-height: 30em; overflow-y: auto;
+	}
+	
+	.row {width:100%;display:table;table-layout:fixed; border-spacing: 1px;}
+	.col {display: table-cell; padding: 0.5em 1em 0.5em 1em; background: #fff; text-align: right; }
+	.col.nospace {
+		padding: 0;
+	}
+	.col.arrow {
+	  width: 1.2em;text-align: center; padding: 0;
+	}
+	.row.header .col {
+	  background: rgb(245,245,245);
+	}
+	.row.header .col.arrow {
+	  color: #c0c0c0;
+	}
+	.row.header .col.arrow[data-scrollable=true] {
+	  background: #000; color: #fff; cursor: pointer;
+	}
+	.row .col.name {
+		width: 10em; text-align: left;
+	}
+	.row.body .col.name {
+		color: rgb(35,147,224);
+	}
+	.hidden {
+		display: none;
+	}	
+	input, select, textarea, button{font-family:inherit; font-size: inherit;}  
+	input {
+	    width: 100%; outline: none; text-align: right; border: none; border-bottom: 1px solid #fff; color: rgb(66,66,66);
+	    line-height: 1.5em; padding-bottom: 4px;
+	}
+	input[readonly] {
+		color: inherit;
+	}
+	input:not([data-index='0']) {
+		font-size: .8em;
+	}
+	
+	input:hover:not([readonly]), input:focus:not([readonly]) {
+	    border-bottom: 1px dashed rgb(125,190,238);
+	    cursor: url(pencil.png?1), auto;
+	}
+	input:not(:focus) {
+	    
+	}
+	input[data-state=saved] {
+		color: #31a354;
+	}
+	input[data-state=saved]:after {
+		content="\2713";
+		color: #31a354;
+	}
+    </style>
+
+  </head>
+
+  <body>
+  	<div class='fmgrid row'>
+	    <div class='col donuts nospace' style='width: 150px;'></div>
+	</div>
+	
+    <script type='text/javascript'>
+
+	    var width = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth,
+	    	height = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight,
+	    	shortmode = 80, longmode = 125,
+	    	curr_sid = Math.floor((width-500)/longmode), stop_sid = curr_sid, max_sid = 23, 
+	    	msie = window.navigator.userAgent.match(/msie/i);
+    
+    	var model = {
+    		schema: [
+				 { key: 'name', label: 'NAME', summary_rw: false, grid_rw: false, fmt: 'str' },
+				 { key: 'p0', label: 'PLAN', summary_rw: true, grid_rw: true },
+				 //{ key: 'p1', label: 'PLAN 2', summary_rw: true, grid_rw: true},
+				 { key: 'fcst', label: 'AVISO FCST', summary_rw: false, grid_rw: false, adj_unadj: true },
+				 { key: 'larrow', label: '\u276E', fmt: 'str'},
+				 { key: 'fc0', label: 'CLOSED', summary_rw: false, grid_rw: false, sid: 1 },
+				 { key: 'fc1', label: ' COMMIT', summary_rw: false, grid_rw: true, adj_unadj: true, sid: 2 },
+				 { key: 'fc2', label: 'UPSIDE', summary_rw: true, grid_rw: true, adj_unadj: true, sid: 3 },
+				 { key: 'fc3', label: 'MOST LIKELY', summary_rw: true, grid_rw: true, adj_unadj: true, sid: 4 },
+				 { key: 'fc4', label: 'PIPELINE', summary_rw: false, grid_rw: false, sid: 5 },
+				 { key: 'fc5', label: 'MONTHLY EXIT 1', summary_rw: false, grid_rw: false, sid: 6 },
+				 { key: 'fc6', label: 'MONTHLY EXIT 2', summary_rw: false, grid_rw: false, sid: 7 },
+				 { key: 'fc7', label: 'LICENCE AMT', summary_rw: false, grid_rw: true, sid: 8 },
+				 { key: 'fc8', label: 'RENEWAL AMT', summary_rw: false, grid_rw: true, sid: 9 },
+				 { key: 'fc9', label: 'STAGE AMT', summary_rw: false, grid_rw: true, sid: 10 },
+				 { key: 'fc10', label: 'CUST AMT 1', summary_rw: false, grid_rw: true, sid: 11 },
+				 { key: 'fc11', label: 'CUST AMT 2', summary_rw: false, grid_rw: true, sid: 12 },
+				 { key: 'fc12', label: 'CUST AMT 3', summary_rw: false, grid_rw: true, sid: 13 },
+				 { key: 'fc13', label: 'CUST AMT 4', summary_rw: false, grid_rw: true, sid: 14 },
+				 { key: 'fc14', label: 'CUST AMT 5', summary_rw: false, grid_rw: true, sid: 15 },
+				 { key: 'fc15', label: 'CUST AMT 6', summary_rw: false, grid_rw: true, sid: 16 },
+				 { key: 'fc16', label: 'CUST AMT 7', summary_rw: false, grid_rw: true, sid: 17 },
+				 { key: 'fc17', label: 'CUST AMT 8', summary_rw: false, grid_rw: true, sid: 18 },
+				 { key: 'fc18', label: 'CUST AMT 9', summary_rw: false, grid_rw: true, sid: 19 },
+				 { key: 'fc19', label: 'CUST AMT 10', summary_rw: false, grid_rw: true, sid: 20 },
+				 { key: 'fc20', label: 'CUST AMT 11', summary_rw: false, grid_rw: true, sid: 21 },
+				 { key: 'fc21', label: 'CUST AMT 12', summary_rw: false, grid_rw: true, sid: 22 },
+				 { key: 'fc22', label: 'CUST AMT 13', summary_rw: false, grid_rw: true, sid: 23 },
+				 { key: 'rarrow', label: '\u276F', fmt: 'str'}
+			],
+			data: [
+			       
+			]
+    	};
+    	
+    	for (var n = 0; n < 500; n++) {
+    		var r = Math.random();
+    		model.data.push([ 'LongHierarchy Level Name ' + (n+1), r*5000000, /*r*10000000,*/ [r*10000000, r*9000000, r*12000000], '',
+    		                  r*10000000, [r*10000000, r*9000000, r*10200000], [r*1000000, r*900000, r*1200000], [r*1500000, r*1200000, r*1800000],
+    		                  r*2000000, r*2000000,r*200340000, r*1340000, r*13402389000, r*134450000,r*134450000,r*134450000,
+    		                  r*134450000,r*134450000,r*134450000,r*134450000,r*134450000,r*134450000,r*134450000,r*134450000,
+    		                  r*134450000,r*134450000,r*134450000,'']);
+    	}
+    	
+    	var money = function(n) {
+    		return typeof(n) === 'string'? n : n.toFixed(0).replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1,");
+    	}, cellStyle = function(cell) {
+    		return (cell.key.match(/arrow/) ? 'col arrow' : 'col') + ' ' + cell.key;
+    	}, cellAttrs = function(cell, isHeader) {
+    		var larrow = cell.key.match(/larrow/), rarrow = cell.key.match(/rarrow/), 
+    			a = {'class': (larrow || rarrow ? 'col arrow' : 'col') + ' ' + cell.key};
+    		if (cell.sid) {
+    			// Scrollable cell.
+    			a['data-sid'] = cell.sid;
+    			if (cell.sid > stop_sid) {
+    				a['class'] += ' hidden';
+    			}
+    		}
+    		if (larrow) {
+    			a['data-curr-sid'] = 0;
+    		} else if (rarrow) {
+    			a['data-curr-sid'] = curr_sid;
+    			a['data-max-sid'] = max_sid;
+    			a['data-action'] = 'scroll';
+    			a['data-scrollable']=true;
+    		}
+    		if (isHeader && (larrow||rarrow)) {
+    			a['data-action'] = 'scroll';
+    		}
+    		return a;
+    	 }, cleanFloat = function(val) {
+			if (typeof(val) !== 'string') { 
+				return parseFloat(val.toFixed(0));	
+			}
+			var cleaned = val.replace(/\<br\>/g, ''), shortened = cleaned.match(/[KMB]$/i),
+				isNeg = cleaned.match(/^\-|^[^0-9]+\-/), 
+				f = parseFloat(cleaned.replace(/\D/g, ''));
+			if (shortened) {
+				var m = {'k': 1000, 'm': 1000*1000, 'b': 1000*1000*1000};
+				f *= m[shortened[0].toLowerCase()];
+			}
+			return isNaN(f) ? 0 : isNeg ? -f : f;
+		}, money2 = function(n) {
+			if (typeof(n) === 'string') { return n; }
+			n = cleanFloat(n);
+			var s='';
+			if (n > 1000000000) {
+				n = n/1000000000; s='B';
+			} else if (n > 1000000) {
+				n = n/1000000; s = 'M';
+			} else if (n > 1000) {
+				n = n/1000; s = 'K';
+			}
+			return n.toFixed(1) + s; 
+		}, toggle = function(sid, isHide) {
+			var el = document.querySelectorAll('[data-sid="' + sid + '"]'), eLen = el.length;
+			for (var l = 0; l < eLen; l++) {
+				if (isHide) {
+					el[l].setAttribute('hidden', '');
+				} else {
+					el[l].removeAttribute('hidden');
+				}
+			}
+		}
+		
+		var inputAttrs = function(key, val, rw, index) {
+			var attrs = {'type': 'text', 'value': money(val), 'data-action': 'keyup:save, blur:save', 
+    				'data-key': key, 'data-orig': cleanFloat(val), 'data-state': 'none', 'data-index': index, 'tabindex': 0 };
+    		if (!rw) {
+    			attrs['readonly']='';
+    			attrs['tabindex']=-1;
+    		}
+    		return attrs;
+		},
+		
+		gridCell = function(schema, data, isSummary) {
+			var rw = isSummary && schema.summary_rw || !isSummary && schema.grid_rw,
+				cell = { type: 'div', attrs: cellAttrs(schema) };
+			if (schema.adj_unadj) {
+				// The column shows adjusted/unadjusted or Aviso forecast details.
+				cell.content = data.map(function(datum, idx) {
+					return { type: 'input', attrs: inputAttrs(schema.key, datum, rw && !idx, idx), content: '' }
+				})
+			} else {
+				// Normal field; could be text or numeric.
+				if (schema.fmt !== 'str') {
+					cell.content = [{ type: 'input', attrs: inputAttrs(schema.key, data, rw, 0), content: '' }]
+				} else {
+					cell.content = money2(data)
+				}
+			}
+			return cell;
+		};
+		
+		var g = D.create({
+		    css : "col nospace parent",
+		    id: 'parent',
+		    content: [
+				{ type: 'div', css: 'canvas', 
+				  content: [
+					{
+						type: 'div', css: 'row header',
+						content: model.schema.map(function(cell) {
+							return { type: 'div', attrs: cellAttrs(cell, true), content: cell.label }
+						})
+					},
+			      	{ type: 'div', css: 'row body', content: model.schema.map(function(cell, idx) {
+							return gridCell(cell, model.data[0][idx], true);
+						})	
+					}
+				  ] 
+				},
+				{ type: 'div', css: 'canvas body', attrs: {'style': 'margin-right: '+(msie ? -17 : 0) + 'px;'},
+				  content: model.data.map(function(row, rindex) {
+						if (rindex > 0) {
+							return { type: 'div', css: 'row body', content: model.schema.map(function(cell, idx) {
+									return gridCell(cell, model.data[rindex][idx], false);
+								})
+							}
+						} else {
+							return { type: 'div', css: 'row body hidden', content: '' }
+						}
+					})
+				}
+			]
+		})
+
+		var parent = document.querySelector('.fmgrid.row');
+		parent.insertBefore(g, parent.firstChild);
+		
+		var b = bubble('.parent');
+    	b.on({
+    	    'save': function(e) { 
+    	    	if (e.type==='blur' || (e.type === 'keyup' && (e.keyCode === 13 || e.keyCode === 9))) {
+    	    		var curr = cleanFloat(e.target.value), orig = cleanFloat(e.target.attributes['data-orig'].value);
+    	    		if (curr !== orig) {
+    	    			e.target.attributes['data-orig'].value = curr;
+    	    			var theInputs = document.querySelectorAll('input[data-key=' + e.target.attributes['data-key'].value + ']'),
+    	    				iLen = theInputs.length, sum = 0;
+    	    			for (var inp = 1; inp < iLen; inp++) {
+    	    				sum += cleanFloat(theInputs[inp].value);
+    	    			}
+    	    			theInputs[0].value = money(sum);
+    	    			theInputs[0].attributes['data-state'].value='saved';
+    	    			e.target.value = money(curr);
+    	    			e.target.attributes['data-state'].value='saved';
+    	    		}
+    	    	}
+    	    },
+    	    // Left and right scrollers.
+    	    'scroll': function(e) {
+    	    	if (!'data-scrollable' in e.target.attributes) { return; }
+    	    	var lScroll = e.target.attributes['class'].value.indexOf('larrow') >= 0,
+    	    		sid = parseInt(e.target.attributes['data-curr-sid'].value);
+    	    	if (lScroll) {
+    	    		var rarrow = document.querySelector('div.row.header .rarrow');
+    	    		if (--sid <= 0) {
+    	    			e.target.removeAttribute('data-scrollable');
+    	    		} 
+    	    		if (sid >= 0) {
+    	    			e.target.attributes['data-curr-sid'].value=sid;
+    	    			if (rarrow) {
+        	    			var rsid = parseInt(rarrow.attributes['data-curr-sid'].value);
+        	    			rarrow.setAttribute('data-scrollable', true);
+        	    			rarrow.attributes['data-curr-sid'].value=rsid-1;
+        	    		}
+    	    			curr_sid = sid;
+    	    			//requestAnimationFrame(function() {
+    	    				toggle(sid, false); toggle(sid+stop_sid+1, true);
+    	    			//})
+    	    		}
+    	    	} else {
+    	    		var larrow = document.querySelector('div.row.header .larrow'), 
+    	    			maxid = parseInt(e.target.attributes['data-max-sid'].value);
+		    		if (++sid >= maxid) {
+		    			e.target.removeAttribute('data-scrollable');
+		    		}
+		    		if (sid <= maxid) {
+		    			e.target.attributes['data-curr-sid'].value=sid;
+		    			if (larrow) {
+			    			var lsid = parseInt(larrow.attributes['data-curr-sid'].value);
+			    			larrow.setAttribute('data-scrollable', true);
+			    			larrow.attributes['data-curr-sid'].value=lsid+1;
+			    		}
+		    			curr_sid = sid;
+		    			//requestAnimationFrame(function() {
+		    				toggle(sid, false); toggle(sid-(stop_sid+1), true);
+    	    			//})
+		    		}
+    	    	}
+
+    	    }
+    	});
+    	
+    </script>
+
+  </body>
+
+</html>

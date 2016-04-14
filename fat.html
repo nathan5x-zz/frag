@@ -1,0 +1,307 @@
+<!DOCTYPE html> 
+<html>
+
+  <head>
+    <script type='text/javascript' src='fat.js'></script>
+    <script type='text/javascript' src='el.js'></script>
+    <link rel="stylesheet" type="text/css" href='fat.css'>
+    <style type='text/css'>
+
+	html {
+	  box-sizing: border-box;
+	  -moz-box-sizing: border-box;
+	}
+	*, *:before, *:after {
+	  box-sizing: inherit;
+	}
+	
+    body {
+        font-family: 'Gotham Book', sans-serif;
+		background: #fff; //rgb(250,250,250);
+		padding: 0;
+		margin: 8em 2em 2em 1em;
+		line-height: 1.5em;
+        
+		scrollbar-base-color: #dadada;
+		scrollbar-3dlight-color: #dadada;
+		scrollbar-highlight-color: #dadada;
+		scrollbar-track-color: #fff;
+		scrollbar-arrow-color: #808080;
+		scrollbar-shadow-color: #dadada;
+		scrollbar-darkshadow-color: #dadada;
+    }
+    
+	input, select, textarea, button{font-family:inherit; font-size: inherit;}  
+	input {
+	    width: 100%; outline: none; text-align: right; border: none; border-bottom: 1px solid #fff; color: rgb(66,66,66);
+	    line-height: 1.5em; padding-bottom: 4px;
+	}
+	input.adj {
+		width: calc(100% - 24px);
+	}
+	input[readonly] {
+		color: inherit;
+	}
+	input:not([data-index='0']) {
+		//font-size: .8em;
+	}
+	
+	input:hover:not([readonly]), input:focus:not([readonly]) {
+	    border-bottom: 1px dashed rgb(125,190,238);
+	    cursor: url(pencil.png?1), auto;
+	}
+	input:not(:focus) {
+	    
+	}
+	input[data-state=saved] {
+		color: #31a354;
+	}
+	input[data-state=saved]:after {
+		content="\2713";
+		color: #31a354;
+	}
+	
+	.row {width:100%;display:table;table-layout:fixed; border-spacing: 1px;}
+	.col {display: table-cell; padding: 0.5em 1em 0.5em 1em; background: #fff; text-align: right; }
+	.col.nospace {
+		padding: 0;
+	}
+	
+	#container {
+		position: absolute;
+		height: calc(100% - 25px);
+		width: calc(100% - 150px);
+		border: 1px solid rgb(229,229,229);
+		background: rgb(239,239,239);
+		color: rgb(131,131,131);
+    }
+    .fattable-header-container {
+        background: rgb(245,245,245);
+        color: rgb(74,74,74);
+        font-size: 0.75em;
+    }
+    .fattable-header-container > div > div {
+        border-right: solid 1px rgb(239,239,239);
+        padding: 0.5em 1em 0.5em 1em
+    }
+    .fattable-body-container {
+        background: #fff;
+        font-size: 0.875em;
+        font-color: 
+    }
+    .fattable-body-container > div > div {
+        border-right: solid 1px rgb(239,239,239);
+        border-bottom: solid 1px rgb(239,239,239);
+        padding: 0.5em 1em 0.5em 1em
+    }
+    </style>
+	
+  </head>
+
+  <body>
+  	<div class='row'>
+  		<div class='col nospace'>
+  			<div id='container'></div>
+  		</div>
+  		<div class='col nospace' style='width: 125px;'>
+  		</div>
+  	</div>
+	
+    <script type='text/javascript'>
+
+	    var width = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth,
+	    	height = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight,
+	    	shortmode = 80, longmode = 125,
+	    	curr_sid = Math.floor((width-500)/longmode), stop_sid = curr_sid, max_sid = 23, numCols = 26,
+	    	msie = window.navigator.userAgent.match(/msie/i);
+    
+    	var model = {
+    		schema: [
+				 { key: 'name', label: 'NAME', summary_rw: false, grid_rw: false, fmt: 'str' },
+				 { key: 'p0', label: 'PLAN', summary_rw: true, grid_rw: true },
+				 //{ key: 'p1', label: 'PLAN 2', summary_rw: true, grid_rw: true},
+				 { key: 'fcst', label: 'AVISO FCST', summary_rw: false, grid_rw: false, adj_unadj: true },
+				 //{ key: 'larrow', label: '\u276E', fmt: 'str'},
+				 { key: 'fc0', label: 'CLOSED', summary_rw: false, grid_rw: false, sid: 1 },
+				 { key: 'fc1', label: ' COMMIT', summary_rw: false, grid_rw: true, adj_unadj: true, sid: 2 },
+				 { key: 'fc2', label: 'UPSIDE', summary_rw: true, grid_rw: true, adj_unadj: true, sid: 3 },
+				 { key: 'fc3', label: 'MOST LIKELY', summary_rw: true, grid_rw: true, adj_unadj: true, sid: 4 },
+				 { key: 'fc4', label: 'PIPELINE', summary_rw: false, grid_rw: false, sid: 5 },
+				 { key: 'fc5', label: 'MONTHLY EXIT 1', summary_rw: false, grid_rw: false, sid: 6 },
+				 { key: 'fc6', label: 'MONTHLY EXIT 2', summary_rw: false, grid_rw: false, sid: 7 },
+				 { key: 'fc7', label: 'LICENCE AMT', summary_rw: false, grid_rw: true, sid: 8 },
+				 { key: 'fc8', label: 'RENEWAL AMT', summary_rw: false, grid_rw: true, sid: 9 },
+				 { key: 'fc9', label: 'STAGE AMT', summary_rw: false, grid_rw: true, sid: 10 },
+				 { key: 'fc10', label: 'CUST AMT 1', summary_rw: false, grid_rw: true, sid: 11 },
+				 { key: 'fc11', label: 'CUST AMT 2', summary_rw: false, grid_rw: true, sid: 12 },
+				 { key: 'fc12', label: 'CUST AMT 3', summary_rw: false, grid_rw: true, sid: 13 },
+				 { key: 'fc13', label: 'CUST AMT 4', summary_rw: false, grid_rw: true, sid: 14 },
+				 { key: 'fc14', label: 'CUST AMT 5', summary_rw: false, grid_rw: true, sid: 15 },
+				 { key: 'fc15', label: 'CUST AMT 6', summary_rw: false, grid_rw: true, sid: 16 },
+				 { key: 'fc16', label: 'CUST AMT 7', summary_rw: false, grid_rw: true, sid: 17 },
+				 { key: 'fc17', label: 'CUST AMT 8', summary_rw: false, grid_rw: true, sid: 18 },
+				 { key: 'fc18', label: 'CUST AMT 9', summary_rw: false, grid_rw: true, sid: 19 },
+				 { key: 'fc19', label: 'CUST AMT 10', summary_rw: false, grid_rw: true, sid: 20 },
+				 { key: 'fc20', label: 'CUST AMT 11', summary_rw: false, grid_rw: true, sid: 21 },
+				 { key: 'fc21', label: 'CUST AMT 12', summary_rw: false, grid_rw: true, sid: 22 },
+				 { key: 'fc22', label: 'CUST AMT 13', summary_rw: false, grid_rw: true, sid: 23 }
+				 //{ key: 'rarrow', label: '\u276F', fmt: 'str'}
+			],
+			data: [
+			       
+			]
+    	};
+    	
+    	for (var n = 0; n < 100; n++) {
+    		var r = Math.random();
+    		model.data.push([ 'LongHierarchy Level Name ' + (n+1), r*5000000, /*r*10000000,*/ [r*10000000, r*9000000, r*12000000], /*'',*/
+    		                  r*10000000, [r*10000000, r*9000000, r*10200000], [r*1000000, r*900000, r*1200000], [r*1500000, r*1200000, r*1800000],
+    		                  r*2000000, r*2000000,r*200340000, r*1340000, r*13402389000, r*134450000,r*134450000,r*134450000,
+    		                  r*134450000,r*134450000,r*134450000,r*134450000,r*134450000,r*134450000,r*134450000,r*134450000,
+    		                  r*134450000,r*134450000,r*134450000/*,''*/]);
+    	}
+    	
+    	var money = function(n) {
+    		return typeof(n) === 'string'? n : n.toFixed(0).replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1,");
+    	}, cellStyle = function(cell) {
+    		return (cell.key.match(/arrow/) ? 'col arrow' : 'col') + ' ' + cell.key;
+    	}, cellAttrs = function(cell, isHeader) {
+    		var larrow = cell.key.match(/larrow/), rarrow = cell.key.match(/rarrow/), 
+    			a = {};
+    		if (cell.sid) {
+    			// Scrollable cell.
+    			a['data-sid'] = cell.sid;
+    			if (cell.sid > stop_sid) {
+    				a['class'] += ' hidden';
+    			}
+    		}
+    		if (larrow) {
+    			a['data-curr-sid'] = 0;
+    		} else if (rarrow) {
+    			a['data-curr-sid'] = curr_sid;
+    			a['data-max-sid'] = max_sid;
+    			a['data-action'] = 'scroll';
+    			a['data-scrollable']=true;
+    		}
+    		if (isHeader && (larrow||rarrow)) {
+    			a['data-action'] = 'scroll';
+    		}
+    		return a;
+    	 }, cleanFloat = function(val) {
+			if (typeof(val) !== 'string') { 
+				return parseFloat(val.toFixed(0));	
+			}
+			var cleaned = val.replace(/\<br\>/g, ''), shortened = cleaned.match(/[KMB]$/i),
+				isNeg = cleaned.match(/^\-|^[^0-9]+\-/), 
+				f = parseFloat(cleaned.replace(/\D/g, ''));
+			if (shortened) {
+				var m = {'k': 1000, 'm': 1000*1000, 'b': 1000*1000*1000};
+				f *= m[shortened[0].toLowerCase()];
+			}
+			return isNaN(f) ? 0 : isNeg ? -f : f;
+		}, money2 = function(n) {
+			if (typeof(n) === 'string') { return n; }
+			n = cleanFloat(n);
+			var s='';
+			if (n > 1000000000) {
+				n = n/1000000000; s='B';
+			} else if (n > 1000000) {
+				n = n/1000000; s = 'M';
+			} else if (n > 1000) {
+				n = n/1000; s = 'K';
+			}
+			return n.toFixed(1) + s; 
+		}, toggle = function(sid, isHide) {
+			var el = document.querySelectorAll('[data-sid="' + sid + '"]'), eLen = el.length;
+			for (var l = 0; l < eLen; l++) {
+				if (isHide) {
+					el[l].setAttribute('hidden', '');
+				} else {
+					el[l].removeAttribute('hidden');
+				}
+			}
+		}
+		
+		var inputAttrs = function(key, val, rw, index) {
+			var attrs = {'type': 'text', 'value': money(val), 'data-action': 'keyup:save, blur:save', 
+    				'data-key': key, 'data-orig': cleanFloat(val), 'data-state': 'none', 'data-index': index, 'tabindex': 0 };
+    		if (!rw) {
+    			attrs['readonly']='';
+    			attrs['tabindex']=-1;
+    		}
+    		if (index === 1) {
+    			attrs['class']='adj';
+    		}
+    		return attrs;
+		}
+		
+	   var columnWidths = [];
+       for (var i=0; i<numCols; i++) {
+           columnWidths.push(120);
+       }
+       columnWidths[0] = 150;
+       
+       var painter = new fattable.Painter();
+       painter.fillCell = function(cellDiv, data) {
+    	   var isSummary = data.rid === 0, schema = data.schema, rw = isSummary && schema.summary_rw || !isSummary && schema.grid_rw;
+		   if (schema.adj_unadj) {
+				// The column shows adjusted/unadjusted or Aviso forecast details.
+				cellDiv.innerHTML = (Elm('div', cellAttrs(schema))(
+					data.content.map(function(datum, idx) {
+						if (idx === 1 && schema.key !== 'fcst') {
+							return Elm('span')(
+								[Elm('img', {'src': 'fm_sync.png'})(),
+								 Elm('input', inputAttrs(schema.key, datum, rw && !idx, idx))() ]
+							)
+						} else {
+							return Elm('input', inputAttrs(schema.key, datum, rw && !idx, idx))()
+						}
+					})
+				)).outerHTML;
+			} else {
+				// Normal field; could be text or numeric.
+				var repr = schema.fmt !== 'str' ? Elm('input', inputAttrs(schema.key, data.content, rw))() : money2(data.content);
+				cellDiv.innerHTML =(Elm('div', cellAttrs(schema))(repr)).outerHTML;
+			}
+       }
+
+       painter.fillCellPending = function(cellDiv, data) {
+           cellDiv.textContent = "";
+           cellDiv.className = "pending";
+       }
+
+
+       var tableData = new fattable.SyncTableModel();
+       tableData.getCellSync = function(i,j) {
+           return {
+               "content": model.data[i][j],
+               "rid": i,
+               "schema": model.schema[j]
+           }
+       }
+
+       //tableData.columnHeaders = ["Country Name", "Country Code", "Indicator Name", "Indicator Code", "1960", "1961", "1962", "1963", "1964", "1965", "1966", "1967", "1968", "1969", "1970", "1971", "1972", "1973", "1974", "1975", "1976", "1977", "1978", "1979", "1980", "1981", "1982", "1983", "1984", "1985", "1986", "1987", "1988", "1989", "1990", "1991", "1992", "1993", "1994", "1995", "1996", "1997", "1998", "1999", "2000", "2001", "2002", "2003", "2004", "2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012", "2013"];
+
+       tableData.getHeaderSync = function(j) {
+           return model.schema[j].label;
+       }
+
+       var table = fattable({
+         "container": "#container",
+         "model": tableData,
+         "nbRows": model.data.length,
+         "rowHeight": 96,
+         "headerHeight": 60,
+         "painter": painter,
+         "columnWidths": columnWidths
+       });
+
+       window.onresize = function() {
+           table.setup();
+       }
+    	
+    </script>
+
+  </body>
+
+</html>
