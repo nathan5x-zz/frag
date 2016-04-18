@@ -681,6 +681,7 @@
       this.readRequiredParameter(parameters, "autoSetup", true);
       this.readRequiredParameter(parameters, "model");
       this.readRequiredParameter(parameters, "nbRows");
+      this.readRequiredParameter(parameters, "containerLeftOffset", 0);
       this.readRequiredParameter(parameters, "rowHeight");
       this.readRequiredParameter(parameters, "columnWidths");
       this.readRequiredParameter(parameters, "rowHeight");
@@ -745,16 +746,18 @@
       this.headerContainer.style.height = this.headerHeight + "px";
       this.headerViewport = document.createElement("div");
       this.headerViewport.className = "fattable-viewport";
-      this.headerViewport.style.width = this.w + "px";
+      this.headerViewport.style.width = (this.w - this.containerLeftOffset) + "px";
       this.headerViewport.style.height = this.headerHeight + "px";
+      this.headerViewport.style['margin-left'] = this.containerLeftOffset + "px";
       this.headerContainer.appendChild(this.headerViewport);
       this.bodyContainer = document.createElement("div");
       this.bodyContainer.className = "fattable-body-container";
       this.bodyContainer.style.top = this.headerHeight + "px";
       this.bodyViewport = document.createElement("div");
       this.bodyViewport.className = "fattable-viewport";
-      this.bodyViewport.style.width = this.w + "px";
+      this.bodyViewport.style.width = (this.w - this.containerLeftOffset) + "px";
       this.bodyViewport.style.height = this.h + "px";
+      this.bodyViewport.style['margin-left'] = this.containerLeftOffset + "px";
       for (j = n = ref = this.nbColsVisible, ref1 = this.nbColsVisible * 2; n < ref1; j = n += 1) {
         for (i = o = ref2 = this.nbRowsVisible, ref3 = this.nbRowsVisible * 2; o < ref3; i = o += 1) {
           el = document.createElement("div");
@@ -783,18 +786,32 @@
       this.scroll = new ScrollBarProxy(this.bodyContainer, this.headerContainer, this.W, this.H, this.eventRegister, this.scrollBarVisible, this.enableDragMove);
       onScroll = (function(_this) {
         return function(x, y) {
-          var _, cell, col, ref6, ref7, ref8;
+          var _, cell, col, ref6, ref7, ref8, left;
           ref6 = _this.leftTopCornerFromXY(x, y), i = ref6[0], j = ref6[1];
           _this.display(i, j);
           ref7 = _this.columns;
           for (_ in ref7) {
             col = ref7[_];
-            col.style[prefixedTransformCssKey] = "translate(" + (col.left - x) + "px, 0px)";
+            if ((left = col.getAttribute('data-sticky')) !== null) {
+            	col.style.position = 'absolute';
+            	col.style.left = left +'px';
+            	col.style.top = 'auto';
+            } else {
+            	//console.log(col.left + " ::: " + x)
+            	col.style[prefixedTransformCssKey] = "translate(" + (col.left - x) + "px, 0px)";
+            }
           }
           ref8 = _this.cells;
           for (_ in ref8) {
             cell = ref8[_];
-            cell.style[prefixedTransformCssKey] = "translate(" + (cell.left - x) + "px," + (cell.top - y) + "px)";
+            if ((left = cell.getAttribute('data-sticky')) !== null) {
+            	cell.style.position = 'absolute';
+            	cell.style.left = left +'px';
+            	cell.style.top = (cell.top - y) + 'px';
+            } else {
+            	//console.log(cell.left + " : " + cell.top + ' : ' +x + ' : ' + y)
+            	cell.style[prefixedTransformCssKey] = "translate(" + (cell.left - x) + "px," + (cell.top - y) + "px)";
+            }
           }
           clearTimeout(_this.scrollEndTimer);
           _this.scrollEndTimer = setTimeout(_this.refreshAllContent.bind(_this), 200);
@@ -899,7 +916,7 @@
           header.pending = true;
           this.painter.fillHeaderPending(header);
         }
-        header.left = col_x;
+        header.left = col_x ;
         header.style.width = col_width;
         this.columns[dest_j] = header;
         fn = (function(_this) {

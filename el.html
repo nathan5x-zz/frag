@@ -1,7 +1,8 @@
+<!DOCTYPE html> 
 <html>
 
   <head>
-    <script type='text/javascript' src='el.js'></script>
+    <script type='text/javascript' src='el.df.js'></script>
     <script type='text/javascript' src='bubble.js'></script>
     <style type='text/css'>
 
@@ -24,7 +25,7 @@
 	   background: rgb(239,239,239);
 	   margin-bottom: 3px;
 	   color: rgb(131,131,131);
-	   font-size: .875em;
+	   font-size: .75em;
 	}
 	.canvas.body {
 		max-height: 30em; overflow-y: auto;
@@ -58,11 +59,19 @@
 	}	
 	input, select, textarea, button{font-family:inherit; font-size: inherit;}  
 	input {
-	    width: 100%; outline: none; text-align: right; border: none; border-bottom: 1px solid #fff;
+	    width: 100%; outline: none; text-align: right; border: none; border-bottom: 1px solid #fff; color: rgb(66,66,66);
+	    line-height: 1.5em; padding-bottom: 4px;
 	}
-	input, div.fm_edit_cell .inner-cell:first-of-type {
-	    line-height: 2em; color: rgb(66,66,66)
+	input.adj {
+		width: calc(100% - 24px);
 	}
+	input[readonly] {
+		color: inherit;
+	}
+	input:not([data-index='0']) {
+		//font-size: .8em;
+	}
+	
 	input:hover:not([readonly]), input:focus:not([readonly]) {
 	    border-bottom: 1px dashed rgb(125,190,238);
 	    cursor: url(pencil.png?1), auto;
@@ -77,12 +86,33 @@
 		content="\2713";
 		color: #31a354;
 	}
+	span.sorter {
+		padding-left: 2px;
+		color: rgb(35,147,224);
+	}
+	.hand {
+		cursor: pointer;
+	}
+	.north {
+		cursor: n-resize;
+	}
+	.south {
+		cursor: s-resize;
+	}
     </style>
 
   </head>
 
   <body>
-  	<div class='fmgrid row'>
+  	
+  	<div class='row top'>
+  		<div class='col nospace'>
+  			<div class='row'>
+  				<div class='col more' data-action='more' >More</div>
+  			</div>
+  			<div class='fmgrid row'>
+  			</div>
+  		</div>
 	    <div class='col donuts nospace' style='width: 150px;'></div>
 	</div>
 	
@@ -91,7 +121,8 @@
 	    var width = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth,
 	    	height = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight,
 	    	shortmode = 80, longmode = 125,
-	    	curr_sid = Math.floor((width-500)/longmode), stop_sid = curr_sid, max_sid = 23;
+	    	curr_sid = Math.floor((width-500)/longmode), stop_sid = curr_sid, max_sid = 23,
+	    	page = 0, pagesize = 5, msie = window.navigator.userAgent.match(/msie/i);
     
     	var model = {
     		schema: [
@@ -130,20 +161,39 @@
 			]
     	};
     	
-    	for (var n = 0; n < 500; n++) {
+    	for (var n = 0; n < 101; n++) {
     		var r = Math.random();
-    		model.data.push([ 'LongHierarchy Level Name ' + (n+1), r*5000000, /*r*10000000,*/ [r*10000000, r*9000000, r*12000000], '',
+    		model.data.push([ 'LongHierarchy Level Name ' + n, r*5000000, /*r*10000000,*/ [r*10000000, r*9000000, r*12000000], '',
     		                  r*10000000, [r*10000000, r*9000000, r*10200000], [r*1000000, r*900000, r*1200000], [r*1500000, r*1200000, r*1800000],
     		                  r*2000000, r*2000000,r*200340000, r*1340000, r*13402389000, r*134450000,r*134450000,r*134450000,
     		                  r*134450000,r*134450000,r*134450000,r*134450000,r*134450000,r*134450000,r*134450000,r*134450000,
     		                  r*134450000,r*134450000,r*134450000,'']);
     	}
+    	for (var col = 0, nCol = model.schema.length; col < nCol; col++) {
+    		var t = 0;
+    		for (var r = 1, rLen = model.data.length; r < rLen; r++) {
+    			if (model.schema[col].adj_unadj) {
+    				t += model.data[r][col][0];
+    			} else if (model.schema[col].fmt !== 'str') {
+    				t +=  model.data[r][col];
+    			}
+    		}
+    		if ( t > 0) {
+    			if (model.schema[col].adj_unadj) {
+    				model.data[0][col][0] = t;
+    			} else if (model.schema[col].fmt !== 'str') {
+    				model.data[0][col] = t;
+    			}
+    		}
+    	}
     	
+    	model.summary = model.data.shift();
+    	    	
     	var money = function(n) {
     		return typeof(n) === 'string'? n : n.toFixed(0).replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1,");
     	}, cellStyle = function(cell) {
     		return (cell.key.match(/arrow/) ? 'col arrow' : 'col') + ' ' + cell.key;
-    	}, cellAttrs = function(cell, isHeader) {
+    	}, cellAttrs = function(cell, isHeader, cellindex) {
     		var larrow = cell.key.match(/larrow/), rarrow = cell.key.match(/rarrow/), 
     			a = {'class': (larrow || rarrow ? 'col arrow' : 'col') + ' ' + cell.key};
     		if (cell.sid) {
@@ -161,8 +211,17 @@
     			a['data-action'] = 'scroll';
     			a['data-scrollable']=true;
     		}
-    		if (isHeader && (larrow||rarrow)) {
-    			a['data-action'] = 'scroll';
+    		if (isHeader) {
+				a['data-colindex'] = cellindex;
+    			if (larrow||rarrow) {
+    				a['data-action'] = 'scroll';
+    			} else if ('sorted' in cell) {
+    				a['class'] += cell.sorted === -1 ? ' south' : ' north';
+    				a['data-action'] = 'sort';
+    			} else {
+    				a['class'] += ' north';
+    				a['data-action'] = 'sort';
+    			}
     		}
     		return a;
     	 }, cleanFloat = function(val) {
@@ -198,78 +257,121 @@
 					el[l].removeAttribute('hidden');
 				}
 			}
+		}, sorted = function(colIndex, order) {
+			var str_sort = function(a,b) {
+				return a[colIndex].localeCompare(b[colIndex])*order;
+			}, num_sort = function(a,b) {
+				return (a[colIndex]-b[colIndex])*order;
+			}, arr_sort = function(a,b) {
+				return (a[colIndex][0]-b[colIndex][0]) * order;
+			}, sorter, cell = model.schema[colIndex];
+			if (cell.adj_unadj) {
+				sorter = arr_sort;
+			} else if (cell.fmt === 'str') {
+				sorter = str_sort;
+			} else {
+				sorter = num_sort;
+			}
+			model.data.sort(sorter);
+			for (var s = 0, sLen = model.schema.length; s < sLen; s++) {
+				delete model.schema[s].sorted;
+			}
+			cell.sorted=order;
 		}
 		
-		var inputAttrs = function(key, val, rw) {
+    	sorted(2,1);
+
+    	var inputAttrs = function(val, rw, index, rowindex, colindex) {
 			var attrs = {'type': 'text', 'value': money(val), 'data-action': 'keyup:save, blur:save', 
-    				'data-key': key, 'data-orig': cleanFloat(val), 'data-state': 'none' };
+    				'data-orig': cleanFloat(val), 'data-state': 'none', 'data-rowindex': rowindex, 'data-colindex': colindex, 'data-index': index, 
+    				'tabindex': 0 };
     		if (!rw) {
     			attrs['readonly']='';
+    			attrs['tabindex']=-1;
+    		}
+    		if (index === 1) {
+    			attrs['class']='adj';
     		}
     		return attrs;
 		}
 		
-		var cell = function(schema, data, isSummary) {
-			var rw = isSummary && schema.summary_rw || !isSummary && schema.grid_rw;
+		var paginate = function() {
+			var slice = [];
+			for (var r = page*pagesize, rLen = Math.min((page+1)*pagesize, model.data.length); r < rLen; r++) {
+				slice.push(model.data[r]);
+			}
+			return slice;
+		}
+		
+		var cell = function(schema, data, rowindex, cellindex) {
+			var isSummary = rowindex === 0, rw = isSummary && schema.summary_rw || !isSummary && schema.grid_rw;
 			if (schema.adj_unadj) {
 				// The column shows adjusted/unadjusted or Aviso forecast details.
-				return Elm('div', cellAttrs(schema))(
+				return Elm('div', cellAttrs(schema, false, cellindex))(
 					data.map(function(datum, idx) {
-						return Elm('input', inputAttrs(schema.key, datum, rw && !idx))()
+						if (idx === 1 && datum !== data[0] && schema.key !== 'fcst') {
+							return Elm('span')(
+									[Elm('img', {'src': 'fm_sync.png', 'class': 'hand', 'data-rowindex': rowindex, 'data-colindex': cellindex,
+												'data-action': 'acceptAdj'})(),
+									 Elm('input', inputAttrs(datum, rw && !idx, idx, rowindex, cellindex))() ]
+								)
+						} else {
+							return Elm('input', inputAttrs(datum, rw && !idx, idx, rowindex, cellindex))()
+						}
 					})
 				)
 			} else {
 				// Normal field; could be text or numeric.
-				var repr = schema.fmt !== 'str' ? Elm('input', inputAttrs(schema.key, data, rw))() : money2(data);
-				return Elm('div', cellAttrs(schema))(repr)
+				var repr = schema.fmt !== 'str' ? Elm('input', inputAttrs(data, rw, 0, rowindex, cellindex))() : money2(data);
+				return Elm('div', cellAttrs(schema, false, cellindex))(repr)
 			}
 		};
 		
-		var grid = Elm('div', {'class': 'col nospace parent', 'id': 'parent'})(
-			Elm('div', {'class': 'canvas'})(
-				Elm('div', {'class': 'row header'})(
-					model.schema.map(function(col) { 
-						return Elm('div', cellAttrs(col, true))(col.label) 
-					})
+		var paint = function() {
+			var grid = Elm('div', {'class': 'col nospace parent', 'id': 'parent'})(
+				Elm('div', {'class': 'canvas'})(
+					Elm('div', {'class': 'row header'})(
+						model.schema.map(function(schema, colindex) { 
+							if ('sorted' in schema) {
+							   var ind;
+							   if (schema.sorted === -1) {
+								   ind = '&darr;';
+							   } else {
+								   ind = '&uarr;';
+							   }
+								return Elm('div', cellAttrs(schema, true, colindex))([ schema.label, 
+									Elm('span', {'class': 'sorter'})( ind )]);
+						   } else { 
+						   		return Elm('div', cellAttrs(schema, true, colindex))(schema.label);
+						   }
+						})
+					),
+					Elm('div', {'class': 'row body'})(
+						model.schema.map(function(col, cid) { 
+							return cell(col, model.summary[cid], 0, cid);
+						})
+					)
 				),
-				Elm('div', {'class': 'row body'})(
-					model.schema.map(function(col, cid) { 
-						return cell(col, model.data[0][cid], true);
-					})
-				)
-			),
-			Elm('div', {'class': 'canvas body'})(
-				model.data.map(function(row, rid) {
-					if (rid > 0) {
+				Elm('div', {'class': 'canvas body', 'style': 'margin-right: '+ (msie ? -17 : 0) + 'px;'})(
+					paginate().map(function(row, rid) {
 						return Elm('div', {'class': 'row body'})(
 							model.schema.map(function(schema, cid) { 
-								var rw = schema.grid_rw, data = row[cid];
-								if (schema.adj_unadj) {
-									// The column shows adjusted/unadjusted or Aviso forecast details.
-									return Elm('div', cellAttrs(schema))(
-										data.map(function(datum, idx) {
-											return Elm('input', inputAttrs(schema.key, datum, rw && !idx))()
-										})
-									)
-								} else {
-									// Normal field; could be text or numeric.
-									var repr = schema.fmt !== 'str' ? Elm('input', inputAttrs(schema.key, data, rw))() : money2(data);
-									return Elm('div', cellAttrs(schema))(repr)
-								}
+								return cell(schema, row[cid], rid, cid);
 							})
 						)
-					} else {
-						return Elm('div', {'class': 'row body', 'hidden': ''})()
-					}
-				})
+					})
+				)
 			)
-		)
+			
+			var parent = document.querySelector('.fmgrid.row'), last;
+			while (last = parent.lastChild) 
+				parent.removeChild(last);
+			parent.appendChild(grid); 
+		}
 		
-		var parent = document.querySelector('.fmgrid.row');
-		parent.insertBefore(grid, parent.firstChild); 
+		paint();
 		
-		
-		var b = bubble('.parent');
+		var b = bubble('.row.top');
     	b.on({
     	    'save': function(e) { 
     	    	if (e.type==='blur' || (e.type === 'keyup' && (e.keyCode === 13 || e.keyCode === 9))) {
@@ -330,7 +432,38 @@
 		    		}
     	    	}
 
-    	    }
+    	    },
+    	    'more': function(e) {
+    	    	page++;
+    	    	paint();
+    	    },
+    	    'sort': function(e) {
+       	    	var cid = parseInt(e.target.attributes['data-colindex'].value),
+       	    		order = e.target.attributes['class'].value.indexOf('north') >= 0 ? -1 : 1;	
+       	    	sorted(cid, order);	
+       	    	page=0;
+       	    	paint();
+    		},
+       	    'acceptAdj': function(e) {
+          	    var cid = parseInt(e.target.attributes['data-colindex'].value),
+          	    	rid = parseInt(e.target.attributes['data-rowindex'].value), 
+          	    	diff = model.data[rid][cid][0] - model.data[rid][cid][1];
+          	    
+          	  	var mgr = document.querySelector('input[data-rowindex="' +rid + '"][data-colindex="' +cid + '"][data-index="0"]'),
+          	  		me = document.querySelector('input[data-rowindex="0"][data-colindex="' +cid + '"][data-index="0"]'),
+          	  		myval = cleanFloat(me.getAttribute('data-orig'));
+          	  	
+          	  	mgr.setAttribute('value', money(model.data[rid][cid][1]));
+          	  	mgr.setAttribute('data-orig', model.data[rid][cid][0]);
+          	  	mgr.setAttribute('data-state', 'saved');
+          	  	
+          	  	me.setAttribute('value', money(myval+diff));
+        	  	me.setAttribute('data-orig', myval);
+        	  	me.setAttribute('data-state', 'saved');
+        	  	
+          	    model.data[rid][cid][0] = model.data[rid][cid][1];
+
+           	}
     	});
     	
     </script>

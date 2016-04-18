@@ -2,8 +2,10 @@
 <html>
 
   <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <script type='text/javascript' src='fat.js'></script>
     <script type='text/javascript' src='el.js'></script>
+    <script type='text/javascript' src='bubble.js'></script>
     <link rel="stylesheet" type="text/css" href='fat.css'>
     <style type='text/css'>
 
@@ -60,6 +62,19 @@
 		content="\2713";
 		color: #31a354;
 	}
+	span.sorter {
+		padding-left: 2px;
+		color: rgb(35,147,224);
+	}
+	.hand {
+		cursor: pointer;
+	}
+	.north {
+		cursor: n-resize;
+	}
+	.south {
+		cursor: s-resize;
+	}
 	
 	.row {width:100%;display:table;table-layout:fixed; border-spacing: 1px;}
 	.col {display: table-cell; padding: 0.5em 1em 0.5em 1em; background: #fff; text-align: right; }
@@ -87,7 +102,6 @@
     .fattable-body-container {
         background: #fff;
         font-size: 0.875em;
-        font-color: 
     }
     .fattable-body-container > div > div {
         border-right: solid 1px rgb(239,239,239);
@@ -111,16 +125,16 @@
 
 	    var width = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth,
 	    	height = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight,
-	    	shortmode = 80, longmode = 125,
+	    	shortmode = 90, longmode = 120,
 	    	curr_sid = Math.floor((width-500)/longmode), stop_sid = curr_sid, max_sid = 23, numCols = 26,
 	    	msie = window.navigator.userAgent.match(/msie/i);
     
     	var model = {
     		schema: [
-				 { key: 'name', label: 'NAME', summary_rw: false, grid_rw: false, fmt: 'str' },
-				 { key: 'p0', label: 'PLAN', summary_rw: true, grid_rw: true },
+				 { key: 'name', label: 'NAME', summary_rw: false, grid_rw: false, fmt: 'str', sticky: true },
+				 { key: 'p0', label: 'PLAN', summary_rw: true, grid_rw: true, sticky: true },
 				 //{ key: 'p1', label: 'PLAN 2', summary_rw: true, grid_rw: true},
-				 { key: 'fcst', label: 'AVISO FCST', summary_rw: false, grid_rw: false, adj_unadj: true },
+				 { key: 'fcst', label: 'AVISO FCST', summary_rw: false, grid_rw: false, adj_unadj: true, sticky: true },
 				 //{ key: 'larrow', label: '\u276E', fmt: 'str'},
 				 { key: 'fc0', label: 'CLOSED', summary_rw: false, grid_rw: false, sid: 1 },
 				 { key: 'fc1', label: ' COMMIT', summary_rw: false, grid_rw: true, adj_unadj: true, sid: 2 },
@@ -152,39 +166,40 @@
 			]
     	};
     	
-    	for (var n = 0; n < 100; n++) {
+    	for (var n = 0; n < 10000; n++) {
     		var r = Math.random();
-    		model.data.push([ 'LongHierarchy Level Name ' + (n+1), r*5000000, /*r*10000000,*/ [r*10000000, r*9000000, r*12000000], /*'',*/
+    		model.data.push([ 'LongHierarchy Level Name ' + (n+1), r*5000000, /*r*10000000,*/ [10000000*(n%5), r*9000000, r*12000000], /*'',*/
     		                  r*10000000, [r*10000000, r*9000000, r*10200000], [r*1000000, r*900000, r*1200000], [r*1500000, r*1200000, r*1800000],
     		                  r*2000000, r*2000000,r*200340000, r*1340000, r*13402389000, r*134450000,r*134450000,r*134450000,
     		                  r*134450000,r*134450000,r*134450000,r*134450000,r*134450000,r*134450000,r*134450000,r*134450000,
     		                  r*134450000,r*134450000,r*134450000/*,''*/]);
+    	}
+    	for (var col = 0, nCol = model.schema.length; col < nCol; col++) {
+    		var t = 0;
+    		for (var r = 1, rLen = model.data.length; r < rLen; r++) {
+    			if (model.schema[col].adj_unadj) {
+    				t += model.data[r][col][0];
+    			} else if (model.schema[col].fmt !== 'str') {
+    				t +=  model.data[r][col];
+    			}
+    		}
+    		if ( t > 0) {
+    			if (model.schema[col].adj_unadj) {
+    				model.data[0][col][0] = t;
+    			} else if (model.schema[col].fmt !== 'str') {
+    				model.data[0][col] = t;
+    			}
+    		}
     	}
     	
     	var money = function(n) {
     		return typeof(n) === 'string'? n : n.toFixed(0).replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1,");
     	}, cellStyle = function(cell) {
     		return (cell.key.match(/arrow/) ? 'col arrow' : 'col') + ' ' + cell.key;
-    	}, cellAttrs = function(cell, isHeader) {
-    		var larrow = cell.key.match(/larrow/), rarrow = cell.key.match(/rarrow/), 
-    			a = {};
-    		if (cell.sid) {
-    			// Scrollable cell.
-    			a['data-sid'] = cell.sid;
-    			if (cell.sid > stop_sid) {
-    				a['class'] += ' hidden';
-    			}
-    		}
-    		if (larrow) {
-    			a['data-curr-sid'] = 0;
-    		} else if (rarrow) {
-    			a['data-curr-sid'] = curr_sid;
-    			a['data-max-sid'] = max_sid;
-    			a['data-action'] = 'scroll';
-    			a['data-scrollable']=true;
-    		}
-    		if (isHeader && (larrow||rarrow)) {
-    			a['data-action'] = 'scroll';
+    	}, cellAttrs = function(cell, cellIndex) {
+    		var a = {'data-colindex': cellIndex};
+    		if (cell.key === 'name') {
+    			a['class'] = 'hand';
     		}
     		return a;
     	 }, cleanFloat = function(val) {
@@ -220,11 +235,34 @@
 					el[l].removeAttribute('hidden');
 				}
 			}
+		}, sorted = function(colIndex, order) {
+			var str_sort = function(a,b) {
+				return a[colIndex].localeCompare(b[colIndex])*order;
+			}, num_sort = function(a,b) {
+				return (a[colIndex]-b[colIndex])*order;
+			}, arr_sort = function(a,b) {
+				return (a[colIndex][0]-b[colIndex][0]) * order;
+			}, sorter, cell = model.schema[colIndex];
+			if (cell.adj_unadj) {
+				sorter = arr_sort;
+			} else if (cell.fmt === 'str') {
+				sorter = str_sort;
+			} else {
+				sorter = num_sort;
+			}
+			model.data.sort(sorter);
+			for (var s = 0, sLen = model.schema.length; s < sLen; s++) {
+				delete model.schema[s].sorted;
+			}
+			cell.sorted=order;
 		}
 		
-		var inputAttrs = function(key, val, rw, index) {
+		sorted(2, -1);
+		
+		var inputAttrs = function(val, rw, index, rowindex, colindex) {
 			var attrs = {'type': 'text', 'value': money(val), 'data-action': 'keyup:save, blur:save', 
-    				'data-key': key, 'data-orig': cleanFloat(val), 'data-state': 'none', 'data-index': index, 'tabindex': 0 };
+    				'data-orig': cleanFloat(val), 'data-state': 'none', 'data-rowindex': rowindex, 'data-colindex': colindex, 'data-index': index, 
+    				'tabindex': 0 };
     		if (!rw) {
     			attrs['readonly']='';
     			attrs['tabindex']=-1;
@@ -237,32 +275,51 @@
 		
 	   var columnWidths = [];
        for (var i=0; i<numCols; i++) {
-           columnWidths.push(120);
+           columnWidths.push(longmode);
        }
        columnWidths[0] = 150;
+       
+       var getStickyPos = function(at) {
+    	   var left = 0;
+		   for (var c = at; c > 0; c--) {
+			   left += columnWidths[c];
+		   } 
+		   return left;
+       }
+       
+       var containerLeftOffset = 0;
+       for (var c = 0, cLen = columnWidths.length; c < cLen; c++) {
+    	   if (model.schema[c].sticky) {
+    	   	containerLeftOffset += columnWidths[c];
+    	   }
+	   }
        
        var painter = new fattable.Painter();
        painter.fillCell = function(cellDiv, data) {
     	   var isSummary = data.rid === 0, schema = data.schema, rw = isSummary && schema.summary_rw || !isSummary && schema.grid_rw;
 		   if (schema.adj_unadj) {
 				// The column shows adjusted/unadjusted or Aviso forecast details.
-				cellDiv.innerHTML = (Elm('div', cellAttrs(schema))(
+				cellDiv.innerHTML = (Elm('div', cellAttrs(schema, data.cid))(
 					data.content.map(function(datum, idx) {
-						if (idx === 1 && schema.key !== 'fcst') {
+						if (idx === 1 && datum !== data.content[0] && schema.key !== 'fcst') {
 							return Elm('span')(
-								[Elm('img', {'src': 'fm_sync.png'})(),
-								 Elm('input', inputAttrs(schema.key, datum, rw && !idx, idx))() ]
+								[Elm('img', {'src': 'fm_sync.png', 'class': 'hand', 'data-rowindex': data.rid, 'data-colindex': data.cid,
+											'data-action': 'acceptAdj'})(),
+								 Elm('input', inputAttrs(datum, rw && !idx, idx, data.rid, data.cid))() ]
 							)
 						} else {
-							return Elm('input', inputAttrs(schema.key, datum, rw && !idx, idx))()
+							return Elm('input', inputAttrs(datum, rw && !idx, idx, data.rid, data.cid))()
 						}
 					})
 				)).outerHTML;
 			} else {
 				// Normal field; could be text or numeric.
-				var repr = schema.fmt !== 'str' ? Elm('input', inputAttrs(schema.key, data.content, rw))() : money2(data.content);
-				cellDiv.innerHTML =(Elm('div', cellAttrs(schema))(repr)).outerHTML;
+				var repr = schema.fmt !== 'str' ? Elm('input', inputAttrs(data.content, rw, data.rid, data.cid))() : money(data.content);
+				cellDiv.innerHTML =(Elm('div', cellAttrs(schema, data.cid))(repr)).outerHTML;
 			}
+		   if (schema.sticky) {
+    		   cellDiv.setAttribute('data-sticky', getStickyPos(data.cid));
+    	   }
        }
 
        painter.fillCellPending = function(cellDiv, data) {
@@ -276,14 +333,36 @@
            return {
                "content": model.data[i][j],
                "rid": i,
+               "cid": j,
                "schema": model.schema[j]
            }
        }
-
-       //tableData.columnHeaders = ["Country Name", "Country Code", "Indicator Name", "Indicator Code", "1960", "1961", "1962", "1963", "1964", "1965", "1966", "1967", "1968", "1969", "1970", "1971", "1972", "1973", "1974", "1975", "1976", "1977", "1978", "1979", "1980", "1981", "1982", "1983", "1984", "1985", "1986", "1987", "1988", "1989", "1990", "1991", "1992", "1993", "1994", "1995", "1996", "1997", "1998", "1999", "2000", "2001", "2002", "2003", "2004", "2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012", "2013"];
+       
+       painter.fillHeader = function(hdrDiv, data) {
+    	   data.content = data.content.replace(/\&amp\;/,'&');
+    	   hdrDiv.innerHTML = data.content;
+    	   if (model.schema[data.cid].sticky) {
+    		   hdrDiv.setAttribute('data-sticky', getStickyPos(data.cid));
+    	   }
+       }
 
        tableData.getHeaderSync = function(j) {
-           return model.schema[j].label;
+    	   var data={cid: j};
+    	   if ('sorted' in model.schema[j]) {
+    		   var ind, cur;
+    		   if (model.schema[j].sorted === -1) {
+    			   ind = '&darr;';
+    			   cur = 'north';
+    		   } else {
+    			   ind = '&uarr;';
+    			   cur = 'south';
+    		   }
+				data.content = (Elm('span', {'class': cur, 'data-colindex': j, 'data-action': 'sort'})([ model.schema[j].label, 
+						Elm('span', {'class': 'sorter'})( ind )])).outerHTML;
+    	   } else { 
+    	   	data.content= (Elm('span', {'class': 'north', 'data-colindex': j, 'data-action': 'sort'})(model.schema[j].label)).outerHTML;
+    	   }
+           return data;
        }
 
        var table = fattable({
@@ -293,12 +372,43 @@
          "rowHeight": 96,
          "headerHeight": 60,
          "painter": painter,
+         "containerLeftOffset": containerLeftOffset,
          "columnWidths": columnWidths
        });
 
        window.onresize = function() {
            table.setup();
        }
+       
+	var b = bubble('#container');
+   	b.on({
+   	    'sort': function(e) {
+   	    	var cid = parseInt(e.target.attributes['data-colindex'].value),
+   	    		order = e.target.attributes['class'].value.indexOf('north') >= 0 ? 1 : -1;	
+   	    	sorted(cid, order);	
+   	    	table.setup();
+		},
+   	    'acceptAdj': function(e) {
+      	    var cid = parseInt(e.target.attributes['data-colindex'].value),
+      	    	rid = parseInt(e.target.attributes['data-rowindex'].value), 
+      	    	diff = model.data[rid][cid][0] - model.data[rid][cid][1];
+      	    
+      	  	var mgr = document.querySelector('input[data-rowindex="' +rid + '"][data-colindex="' +cid + '"][data-index="0"]'),
+      	  		me = document.querySelector('input[data-rowindex="0"][data-colindex="' +cid + '"][data-index="0"]'),
+      	  		myval = cleanFloat(me.getAttribute('data-orig'));
+      	  	
+      	  	mgr.setAttribute('value', money(model.data[rid][cid][1]));
+      	  	mgr.setAttribute('data-orig', model.data[rid][cid][0]);
+      	  	mgr.setAttribute('data-state', 'saved');
+      	  	
+      	  	me.setAttribute('value', money(myval+diff));
+    	  	me.setAttribute('data-orig', myval);
+    	  	me.setAttribute('data-state', 'saved');
+    	  	
+      	    model.data[rid][cid][0] = model.data[rid][cid][1];
+
+       	}
+   	});
     	
     </script>
 

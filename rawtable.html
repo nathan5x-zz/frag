@@ -1,0 +1,335 @@
+<!-- This code is public domain, share and enjoy. -->
+<html>
+<style type="text/css" media="screen">
+  #table {
+    position: absolute;
+    top: 30px;
+    bottom: 0;
+    left: 10px;
+    right: 10px;
+  }
+  #header {
+    position: absolute;
+    top: 0;
+    height: 25px;
+    left: 10px;
+    right: 10px;
+    font-weight: bold;
+    font-size: 20px;
+    border-bottom: solid 1px #444;
+  }
+  .title {
+    width: 100px;
+    left: 0;
+    position: absolute;
+    top: auto;
+  }
+  .desc {
+    position: absolute;
+    left: 120px; 
+    top: 0px;
+    font-family: italic;
+    color: #444;
+  }
+  .desc2 {
+    position: absolute;
+    left: 240px; 
+    top: 0px;
+    font-family: italic;
+    color: #444;
+  }
+  .desc3 {
+    position: absolute;
+    left: 360px; 
+    top: 0px;
+    font-family: italic;
+    color: #444;
+  }
+  .desc4 {
+    position: absolute;
+    left: 480px; 
+    top: 0px;
+    font-family: italic;
+    color: #444;
+  }
+</style>
+<script type="text/javascript" charset="utf-8">
+  window.ui = window.ui || {};
+
+  /**  @constructor */
+  ui.ListView = function(element, collection) {
+    this.el = element;
+    this.cellHeight = 30;
+    this.collection = collection;
+
+    // Find the first element with class 'Template' and use as a row template
+    var tt = this.el.getElementsByClassName('Template');
+    if (tt.length > 0) {
+      var t = tt[0];
+      this.template = t;
+      t.parentNode.removeChild(t);
+    }
+
+    this.content = document.createElement('div');
+    this.el.style.overflow = 'auto';
+    this.el.appendChild(this.content);
+    this.cells = [];
+    this.listeners = [];
+
+    // Juggle rows on scroll
+    this.el.addEventListener('scroll', this.redraw.bind(this));
+
+    // Ensure we have enough rows.
+    window.addEventListener('resize', this.redraw.bind(this));
+
+    // Get us started
+    this.redraw();
+  };
+
+  /** Ensure we have enough physical lines to fill the screen */
+  ui.ListView.prototype.ensure = function(desired) {
+      while (this.cells.length < desired) {
+        var cell = new ui.Template(this, this.template);
+        cell.element.style.position = 'absolute';
+        cell.element.style.y = 0;
+        cell.element.style.x = 0;
+        cell.element.style.height = this.cellHeight + 'px';
+        cell.element.style.width = '100%';
+        this.content.appendChild(cell.element);
+        this.cells.push(cell);
+      }
+    };
+
+  /** Rerender the rows */
+  ui.ListView.prototype.redraw = function() {
+    var cellh = this.cellHeight;
+    var oheight = this.el.offsetHeight;
+    var top = this.el.scrollTop;
+    var topRow = ~~(top / cellh);
+    var len = this.collection.length;
+
+    this.content.style.height = (len * cellh) + 'px';
+
+    var slosh = 10;
+
+    var desiredRows = ~~(oheight / cellh + slosh);
+    this.ensure(desiredRows);
+
+    var start = Math.max(topRow - slosh / 2, 0);
+    var end = Math.min(len, start + desiredRows);
+    start = Math.max(0, end - desiredRows);
+
+    var rows = [];
+    for (var i = start; i < start + this.cells.length; i++) {
+      rows.push(i);
+      var cell = this.cells[i % this.cells.length];
+      if (i < len) {
+        var item = this.collection[i];
+        cell.setItem(item);
+        cell.setTop(cellh * i);
+        cell.element.style.display = 'block';
+      } else {
+        cell.element.style.display = 'none';
+      }
+    }
+  };
+
+
+  /** @constructor */
+  ui.Template = function(listView, node) {
+    this.listView = listView;
+    this.db = listView.collection;
+
+    var tasks = [];
+    this.tasks = tasks;
+
+    this.element = node.cloneNode(true);
+
+    // This recursive function sets up our "tasks" which fill in data from 
+    function proc(node) {
+      var cc = node.childNodes;
+      for (var i = 0; i < cc.length; i++) {
+        var child = cc[i];
+        // TODO - Handle attributes and more complex text substitution.
+        // e.g. sequence of "text",key extracted from '{{title}} by {{author}}' or 'http://{{key}}_{{blah}}.jpg'
+        if (child.nodeType == 3) {
+          var m = child.textContent.match('{{(.*)}}');
+          if (m) {
+            var key = m[1];
+            tasks.push(function(doc) {
+              child.textContent = doc[key] || '';
+            });
+          }
+        } else {
+          proc(child);
+        }
+      }
+    }
+    proc(this.element);
+  };
+
+  ui.Template.prototype.setTop = function(top) {
+      this.element.style.top = top + 'px';
+  };
+
+  ui.Template.prototype.setItem = function(item) {
+    if (item != this.item) {
+      this.item = item;
+      this.tasks.forEach(function(func) { func(item); });
+    }
+  };
+  
+  /** @constructor 
+   *
+   * This mixes in a touch scroll handler for iPad.  We can't use the native scrolling because it bounces the app.
+   *
+   * REVIEW - consider switching from overflow: auto to static positioning, so we can bounce/overflow our scrollable div.
+   */
+  ui.ScrollController = function(el) {
+    this.el = el;
+    el.addEventListener('touchstart', this.touchstart.bind(this));
+    el.addEventListener('touchmove', this.touchmove.bind(this));
+    el.addEventListener('touchend', this.touchend.bind(this));
+  };
+
+  ui.ScrollController.prototype = {
+    touchstart: function (ev) {
+
+      if (this.animating)
+        this.endAnimation();
+
+      td = ev;
+      console.log('down',ev);
+      this.y = ev.changedTouches[0].clientY;
+      this.startY = this.y;
+
+      this.pos = 0;
+      this.prev = ev;
+
+      this.pstamp = ev.timeStamp;
+      this.velocity = undefined;
+    },
+    update: function(ev) {
+      var t = ev.changedTouches[0];
+      var deltaY = t.clientY - this.y;
+      this.el.scrollTop -= deltaY;
+
+      var deltaT = (ev.timeStamp - this.pstamp);
+      var velocity = deltaY / deltaT;
+
+      // weighted average
+      if (this.velocity !== undefined)
+        this.velocity = (2*velocity + this.velocity)/3;
+      else
+        this.velocity = velocity;
+
+
+      this.pos = (this.pos + 1 ) % 5;
+      this.prev = ev;
+      this.pstamp = ev.timeStamp;
+
+      if (this.timer)
+        clearInterval(this.timer);
+      this.timer = undefined;
+    },
+    touchmove: function (ev) {
+      var t = ev.changedTouches[0];
+      if (this.y) {
+        if (Math.abs(t.clientY - this.startY) > 10)
+          this.isScrolling = true;
+
+        if (this.isScrolling) {
+          this.update(ev);
+          this.y = t.clientY;
+        }
+        ev.preventDefault();      
+
+      }
+      tm = ev;
+    },
+    touchend: function (ev) {
+      tu = ev;
+      this.y = undefined;
+
+      if (this.isScrolling) {
+        ev.preventDefault();
+
+        if (!isNaN(this.velocity)) {
+          this.startAnimation();
+        } else {
+          this.isScrolling = false;
+        }
+
+      }
+
+      console.log('up',ev, this.pos, this.velocity, this.data);
+    },
+    startAnimation: function() {
+      if (this.timer)
+        return;
+      this.animating = true;
+
+      this.foo = Date.now();
+      this.timer = setInterval(this.animate.bind(this), 10);
+    },
+    endAnimation: function() {
+      this.animating = false;
+      clearInterval(this.timer);
+      this.timer = undefined;
+    },
+    animate: function() {
+      if (!this.animating) {
+        clearInterval(this.timer);
+        return;
+      }
+
+      var now = Date.now();
+      var deltaY = this.velocity * (now-this.foo);
+
+      if (this.velocity > 0.02)
+        this.velocity -= .02;
+      else if (this.velocity < -.02)
+        this.velocity += .02;
+
+
+      this.el.scrollTop = ~~(this.el.scrollTop - deltaY);
+      this.foo = now;
+
+      if (Math.abs(deltaY) < 1) {
+        this.endAnimation();
+        this.isScrolling = false;
+      }
+    }
+  };
+  
+</script>
+<script type="text/javascript" charset="utf-8">
+  // Fill in some dummy data and initialize the table.
+  function initialize() {
+    var data = [];
+    for (var i=0;i<10000;i++) {
+      data[i] = {'title': 'Title '+i, 'description': 'Description '+i,
+    		  'description2': 'asaaadaSDasdadqwdqdcascascascascacaca '+i,
+    		  'description3': 'ascascacascasdcadsgcasdcadgvagdvadvadvadsvasdvsdvk '+i,
+    		  'description4': 'ascascacascasdcadsgcasdcadgvagdvadvadvadsvasdvsdvk '+i};
+    }
+    var table = document.getElementById('table');
+    // comment this out if you don't want iPad scrolling.
+    new ui.ScrollController(table);
+    var listView = new ui.ListView(table, data);
+    
+  }
+</script>
+<body onload='initialize()'>
+  <div id='header' class='row'>
+    <div class='title'>Title</div><div class='desc'>Description</div>
+  </div>
+  <div id='table'>
+    <!-- This is the layout for the rows, the mustache expressions are filled in with corresponding fields from "data" -->
+    <div class="Template">
+      <div class='title'>{{title}}</div><div class='desc'>{{description}}</div><div class='desc2'>{{description2}}</div>
+      <div class='desc3'>{{description3}}</div><div class='desc4'>{{description4}}</div>
+    </div>
+  </div>
+</body>
+</html>

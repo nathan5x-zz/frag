@@ -1,8 +1,7 @@
-<!DOCTYPE html> 
 <html>
 
   <head>
-    <script type='text/javascript' src='D.js'></script>
+    <script type='text/javascript' src='laconic.js'></script>
     <script type='text/javascript' src='bubble.js'></script>
     <style type='text/css'>
 
@@ -28,7 +27,7 @@
 	   font-size: .875em;
 	}
 	.canvas.body {
-		max-height: 30em; overflow-y: auto;
+		max-height: 50em; overflow-y: auto;
 	}
 	
 	.row {width:100%;display:table;table-layout:fixed; border-spacing: 1px;}
@@ -54,21 +53,16 @@
 	.row.body .col.name {
 		color: rgb(35,147,224);
 	}
-	.hidden {
+	*[hidden] {
 		display: none;
 	}	
 	input, select, textarea, button{font-family:inherit; font-size: inherit;}  
 	input {
-	    width: 100%; outline: none; text-align: right; border: none; border-bottom: 1px solid #fff; color: rgb(66,66,66);
-	    line-height: 1.5em; padding-bottom: 4px;
+	    width: 100%; outline: none; text-align: right; border: none; border-bottom: 1px solid #fff;
 	}
-	input[readonly] {
-		color: inherit;
+	input, div.fm_edit_cell .inner-cell:first-of-type {
+	    line-height: 2em; color: rgb(66,66,66)
 	}
-	input:not([data-index='0']) {
-		font-size: .8em;
-	}
-	
 	input:hover:not([readonly]), input:focus:not([readonly]) {
 	    border-bottom: 1px dashed rgb(125,190,238);
 	    cursor: url(pencil.png?1), auto;
@@ -88,8 +82,10 @@
   </head>
 
   <body>
-  	<div class='fmgrid row'>
-	    <div class='col donuts nospace' style='width: 150px;'></div>
+  	<div class='row'>
+	    <div id='parent' class='col nospace parent'>
+	    </div>
+	    <div class='col nospace' style='width: 150px;'></div>
 	</div>
 	
     <script type='text/javascript'>
@@ -97,8 +93,7 @@
 	    var width = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth,
 	    	height = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight,
 	    	shortmode = 80, longmode = 125,
-	    	curr_sid = Math.floor((width-500)/longmode), stop_sid = curr_sid, max_sid = 23, 
-	    	msie = window.navigator.userAgent.match(/msie/i);
+	    	curr_sid = Math.floor((width-500)/longmode), stop_sid = curr_sid, max_sid = 23;
     
     	var model = {
     		schema: [
@@ -150,14 +145,14 @@
     		return typeof(n) === 'string'? n : n.toFixed(0).replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1,");
     	}, cellStyle = function(cell) {
     		return (cell.key.match(/arrow/) ? 'col arrow' : 'col') + ' ' + cell.key;
-    	}, cellAttrs = function(cell, isHeader) {
+    	}, cellAttrs = function(cell, isSummary) {
     		var larrow = cell.key.match(/larrow/), rarrow = cell.key.match(/rarrow/), 
     			a = {'class': (larrow || rarrow ? 'col arrow' : 'col') + ' ' + cell.key};
     		if (cell.sid) {
     			// Scrollable cell.
     			a['data-sid'] = cell.sid;
     			if (cell.sid > stop_sid) {
-    				a['class'] += ' hidden';
+    				a['hidden'] = '';
     			}
     		}
     		if (larrow) {
@@ -168,13 +163,13 @@
     			a['data-action'] = 'scroll';
     			a['data-scrollable']=true;
     		}
-    		if (isHeader && (larrow||rarrow)) {
+    		if (isSummary && (larrow||rarrow)) {
     			a['data-action'] = 'scroll';
     		}
     		return a;
     	 }, cleanFloat = function(val) {
 			if (typeof(val) !== 'string') { 
-				return parseFloat(val.toFixed(0));	
+				return parseFloat(val.toFixed(0)); 
 			}
 			var cleaned = val.replace(/\<br\>/g, ''), shortened = cleaned.match(/[KMB]$/i),
 				isNeg = cleaned.match(/^\-|^[^0-9]+\-/), 
@@ -206,73 +201,122 @@
 				}
 			}
 		}
-		
-		var inputAttrs = function(key, val, rw, index) {
+    	
+		var inputAttrs = function(key, val, rw) {
 			var attrs = {'type': 'text', 'value': money(val), 'data-action': 'keyup:save, blur:save', 
-    				'data-key': key, 'data-orig': cleanFloat(val), 'data-state': 'none', 'data-index': index, 'tabindex': 0 };
+    				'data-key': key, 'data-orig': cleanFloat(val), 'data-state': 'none' };
     		if (!rw) {
     			attrs['readonly']='';
-    			attrs['tabindex']=-1;
     		}
     		return attrs;
-		},
+		}
 		
-		gridCell = function(schema, data, isSummary) {
-			var rw = isSummary && schema.summary_rw || !isSummary && schema.grid_rw,
-				cell = { type: 'div', attrs: cellAttrs(schema) };
+    	/*Elm.registerElement('fm_header', function(cells) {
+		  	this.appendChild(Elm.div({'class': 'row header'}, cells.map(function(thisCell) {
+    			return Elm.div(cellAttrs(thisCell, true), thisCell.label);
+    		})));
+		});
+    	
+    	Elm.registerElement('fm_input', function(val, schema, rw) {
+    		var attrs = {'type': 'text', 'value': money(val), 'data-action': 'keyup:save, blur:save', 
+    				'data-key': schema.key, 'data-orig': cleanFloat(val), 'data-state': 'none' };
+    		if (!rw) {
+    			attrs['readonly']='';
+    		}
+			this.appendChild(Elm.input(attrs));
+		});
+    	
+    	Elm.registerElement('fm_edit_cell', function(cell, schema, rw) {
+			this.appendChild(Elm.div({}, cell.map(function(field, fid) {
+					if (!fid) {
+						return Elm.fm_input(field, schema, rw);
+					} else {
+						return Elm.div({'class': 'inner-cell'},money(field));
+					}
+				})));
+		});
+    	
+    	Elm.registerElement('fm_row', function(row, schema, isSummary) {    	
+    		this.appendChild(Elm.div({'class': 'row body'}, row.map(function(cell, cid) {
+    			var thisSchema = schema[cid], rw = !isSummary && thisSchema.grid_rw || isSummary && thisSchema.summary_rw;
+    			if (thisSchema.adj_unadj) {
+    				return Elm.div(cellAttrs(thisSchema, false), Elm.fm_edit_cell(cell, thisSchema, rw));
+    			} else {
+    				if (thisSchema.fmt !== 'str') {
+    					return Elm.div(cellAttrs(thisSchema, false), Elm.fm_input(cell, thisSchema, rw));	
+    				} else {
+    					return Elm.div(cellAttrs(thisSchema, false), money(cell));
+    				}
+    			}
+    		})));
+
+		});
+    	
+    	Elm.registerElement('fm_grid', function(model) {
+    		var hdrCanvas = Elm.div({'class': 'canvas'}), bodyRows=[];
+    		Elm.fm_header(model.schema).appendTo(hdrCanvas);
+    		Elm.fm_row(model.data[0], model.schema, true).appendTo(hdrCanvas);
+    		for (r = 1, rLen = model.data.length; r < rLen; r++) {
+    			bodyRows.push(Elm.fm_row(model.data[r], model.schema, false));
+    		}
+    		var bodyCanvas = Elm.div({'class': 'canvas body'}, bodyRows), container = Elm.div({},[hdrCanvas, bodyCanvas]);
+		    this.appendChild(container);
+		});
+    	
+    	Elm.fm_grid(model).appendTo(document.getElementById('parent'));*/
+    	
+    	var gcell = function(schema, data, isSummary) {
+			var rw = isSummary && schema.summary_rw || !isSummary && schema.grid_rw;
 			if (schema.adj_unadj) {
 				// The column shows adjusted/unadjusted or Aviso forecast details.
-				cell.content = data.map(function(datum, idx) {
-					return { type: 'input', attrs: inputAttrs(schema.key, datum, rw && !idx, idx), content: '' }
-				})
+				return Elm.div(cellAttrs(schema),
+					data.map(function(datum, idx) {
+						return Elm.input(inputAttrs(schema.key, datum, rw && !idx))
+					})
+				)
 			} else {
 				// Normal field; could be text or numeric.
-				if (schema.fmt !== 'str') {
-					cell.content = [{ type: 'input', attrs: inputAttrs(schema.key, data, rw, 0), content: '' }]
-				} else {
-					cell.content = money2(data)
-				}
+				var repr = schema.fmt !== 'str' ? Elm.input(inputAttrs(schema.key, data, rw)) : money2(data);
+				return Elm.div(cellAttrs(schema), repr)
 			}
-			return cell;
 		};
 		
-		var g = D.create({
-		    css : "col nospace parent",
-		    id: 'parent',
-		    content: [
-				{ type: 'div', css: 'canvas', 
-				  content: [
-					{
-						type: 'div', css: 'row header',
-						content: model.schema.map(function(cell) {
-							return { type: 'div', attrs: cellAttrs(cell, true), content: cell.label }
-						})
-					},
-			      	{ type: 'div', css: 'row body', content: model.schema.map(function(cell, idx) {
-							return gridCell(cell, model.data[0][idx], true);
-						})	
-					}
-				  ] 
-				},
-				{ type: 'div', css: 'canvas body', attrs: {'style': 'margin-right: '+(msie ? -17 : 0) + 'px;'},
-				  content: model.data.map(function(row, rindex) {
-						if (rindex > 0) {
-							return { type: 'div', css: 'row body', content: model.schema.map(function(cell, idx) {
-									return gridCell(cell, model.data[rindex][idx], false);
-								})
-							}
-						} else {
-							return { type: 'div', css: 'row body hidden', content: '' }
-						}
-					})
-				}
-			]
-		})
-
-		var parent = document.querySelector('.fmgrid.row');
-		parent.insertBefore(g, parent.firstChild);
-		
-		var b = bubble('.parent');
+    	var g = Elm.div({'class': 'container'}, 
+    				Elm.div({'class': 'canvas'}, 
+		    			Elm.div({'class': 'row header'}, model.schema.map(function(thisCell) {
+		        			return Elm.div(cellAttrs(thisCell, true), thisCell.label);
+		        		})),
+		        		Elm.div({'class': 'row body'}, model.schema.map(function(thisCell, cid) {
+		        			return gcell(thisCell, model.data[0][cid], true);
+		        		}))),
+		        	Elm.div({'class': 'canvas body'}, 
+	        			model.data.map(function(row, rid) {
+	    					if (rid > 0) {
+	    						return Elm.div({'class': 'row body'},
+	    							model.schema.map(function(schema, cid) { 
+	    								var rw = schema.grid_rw, data = row[cid];
+	    								if (schema.adj_unadj) {
+	    									// The column shows adjusted/unadjusted or Aviso forecast details.
+	    									return Elm.div(cellAttrs(schema),
+	    										data.map(function(datum, idx) {
+	    											return Elm.input(inputAttrs(schema.key, datum, rw && !idx))
+	    										})
+	    									)
+	    								} else {
+	    									// Normal field; could be text or numeric.
+	    									var repr = schema.fmt !== 'str' ? Elm.input(inputAttrs(schema.key, data, rw)) : money2(data);
+	    									return Elm.div(cellAttrs(schema),repr)
+	    								}
+	    							})
+	    						)
+	    					} else {
+	    						return Elm.div({'class': 'row body', 'hidden': ''})
+	    					}
+	    				})
+					)).appendTo(document.getElementById('parent'));
+    	
+    	
+    	var b = bubble('.parent');
     	b.on({
     	    'save': function(e) { 
     	    	if (e.type==='blur' || (e.type === 'keyup' && (e.keyCode === 13 || e.keyCode === 9))) {
@@ -336,6 +380,38 @@
     	    }
     	});
     	
+     /*for (var i=0; i<10; i++) {
+    	var row = document.querySelector("table").insertRow(-1);
+    	row.className = 'row' + (!i ? ' header': '');
+	    for (var j=0; j<10; j++) {
+	        var letter = String.fromCharCode("A".charCodeAt(0)+j-1), col = row.insertCell(-1);
+	        col.className = 'col' + ((i&&j) ? '' : ' read-only');
+	        col.innerHTML = i&&j ? "<div><input id='"+ letter+i +"'/></div><div> Adjusted</div><div>Unadjusted</div>" : i||letter;
+	    }
+	}
+
+	var DATA={}, INPUTS=[].slice.call(document.querySelectorAll("input"));
+	INPUTS.forEach(function(elm) {
+	    elm.onfocus = function(e) {
+	        e.target.value = localStorage[e.target.id] || "";
+	    };
+	    elm.onblur = function(e) {
+	        localStorage[e.target.id] = e.target.value;
+	        computeAll();
+	    };
+	    var getter = function() {
+	        var value = localStorage[elm.id] || "";
+	        if (value.charAt(0) == "=") {
+	            with (DATA) return eval(value.substring(1));
+	        } else { return isNaN(parseFloat(value)) ? value : parseFloat(value); }
+	    };
+	    Object.defineProperty(DATA, elm.id, {get:getter});
+	    Object.defineProperty(DATA, elm.id.toLowerCase(), {get:getter});
+	});
+	(window.computeAll = function() {
+	    INPUTS.forEach(function(elm) { try { elm.value = DATA[elm.id]; } catch(e) {} });
+	})();*/
+
     </script>
 
   </body>
