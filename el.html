@@ -20,6 +20,10 @@
 		margin: 8em 2em 2em 1em;
 		line-height: 1.5em;
 	}
+	img {
+		padding-right: 4px;
+		vertical-align: middle;
+	}
 	.canvas {
 	   border: 1px solid rgb(229,229,229);
 	   background: rgb(239,239,239);
@@ -47,9 +51,6 @@
 	}
 	.row.header .col.arrow[data-scrollable=true] {
 	  background: #000; color: #fff; cursor: pointer;
-	}
-	.row .col.name {
-		width: 10em; text-align: left;
 	}
 	.row.body .col.name {
 		color: rgb(35,147,224);
@@ -99,6 +100,33 @@
 	.south {
 		cursor: s-resize;
 	}
+	.flexy-row {
+		display: flexbox;
+		flex-direction: row;
+	}
+	.flexy-col {
+		display: flexbox;
+		flex-direction: column;
+	}
+	.pop {
+		position: absolute;
+		background-color: rgba(254,254,254,.9);
+		border:1px solid rgb(215,215,215);
+		-moz-box-shadow: 1px 1px 1px rgba(0,0,0,0.2);
+		-webkit-box-shadow: 1px 1px 1px rgba(0,0,0,0.2);
+		box-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+		-webkit-border-radius: 3px;
+		-moz-border-radius: 3px;
+		border-radius: 3px;
+		pointer-events:all;
+		max-height: 200px;
+		overflow: auto;
+		font-size: .75em;
+	}
+	.pop .hdr {
+		background-color: rgb(245,245,245);
+		padding: 4px 0 4px 10px;
+	}
     </style>
 
   </head>
@@ -121,39 +149,38 @@
 	    var width = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth,
 	    	height = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight,
 	    	shortmode = 80, longmode = 125,
-	    	curr_sid = Math.floor((width-500)/longmode), stop_sid = curr_sid, max_sid = 23,
-	    	page = 0, pagesize = 5, msie = window.navigator.userAgent.match(/msie/i);
+	    	visibleCols = Math.floor((width-500)/longmode), scrollFrom = 4, currentScroll = scrollFrom, maxScroll=26,
+	    	page = 0, pagesize = 1000, msie = window.navigator.userAgent.match(/msie/i);
     
     	var model = {
     		schema: [
 				 { key: 'name', label: 'NAME', summary_rw: false, grid_rw: false, fmt: 'str' },
 				 { key: 'p0', label: 'PLAN', summary_rw: true, grid_rw: true },
-				 //{ key: 'p1', label: 'PLAN 2', summary_rw: true, grid_rw: true},
 				 { key: 'fcst', label: 'AVISO FCST', summary_rw: false, grid_rw: false, adj_unadj: true },
 				 { key: 'larrow', label: '\u276E', fmt: 'str'},
-				 { key: 'fc0', label: 'CLOSED', summary_rw: false, grid_rw: false, sid: 1 },
-				 { key: 'fc1', label: ' COMMIT', summary_rw: false, grid_rw: true, adj_unadj: true, sid: 2 },
-				 { key: 'fc2', label: 'UPSIDE', summary_rw: true, grid_rw: true, adj_unadj: true, sid: 3 },
-				 { key: 'fc3', label: 'MOST LIKELY', summary_rw: true, grid_rw: true, adj_unadj: true, sid: 4 },
-				 { key: 'fc4', label: 'PIPELINE', summary_rw: false, grid_rw: false, sid: 5 },
-				 { key: 'fc5', label: 'MONTHLY EXIT 1', summary_rw: false, grid_rw: false, sid: 6 },
-				 { key: 'fc6', label: 'MONTHLY EXIT 2', summary_rw: false, grid_rw: false, sid: 7 },
-				 { key: 'fc7', label: 'LICENCE AMT', summary_rw: false, grid_rw: true, sid: 8 },
-				 { key: 'fc8', label: 'RENEWAL AMT', summary_rw: false, grid_rw: true, sid: 9 },
-				 { key: 'fc9', label: 'STAGE AMT', summary_rw: false, grid_rw: true, sid: 10 },
-				 { key: 'fc10', label: 'CUST AMT 1', summary_rw: false, grid_rw: true, sid: 11 },
-				 { key: 'fc11', label: 'CUST AMT 2', summary_rw: false, grid_rw: true, sid: 12 },
-				 { key: 'fc12', label: 'CUST AMT 3', summary_rw: false, grid_rw: true, sid: 13 },
-				 { key: 'fc13', label: 'CUST AMT 4', summary_rw: false, grid_rw: true, sid: 14 },
-				 { key: 'fc14', label: 'CUST AMT 5', summary_rw: false, grid_rw: true, sid: 15 },
-				 { key: 'fc15', label: 'CUST AMT 6', summary_rw: false, grid_rw: true, sid: 16 },
-				 { key: 'fc16', label: 'CUST AMT 7', summary_rw: false, grid_rw: true, sid: 17 },
-				 { key: 'fc17', label: 'CUST AMT 8', summary_rw: false, grid_rw: true, sid: 18 },
-				 { key: 'fc18', label: 'CUST AMT 9', summary_rw: false, grid_rw: true, sid: 19 },
-				 { key: 'fc19', label: 'CUST AMT 10', summary_rw: false, grid_rw: true, sid: 20 },
-				 { key: 'fc20', label: 'CUST AMT 11', summary_rw: false, grid_rw: true, sid: 21 },
-				 { key: 'fc21', label: 'CUST AMT 12', summary_rw: false, grid_rw: true, sid: 22 },
-				 { key: 'fc22', label: 'CUST AMT 13', summary_rw: false, grid_rw: true, sid: 23 },
+				 { key: 'fc0', label: 'CLOSED', summary_rw: false, grid_rw: false},
+				 { key: 'fc1', label: ' COMMIT', summary_rw: false, grid_rw: true, adj_unadj: true },
+				 { key: 'fc2', label: 'UPSIDE', summary_rw: true, grid_rw: true, adj_unadj: true },
+				 { key: 'fc3', label: 'MOST LIKELY', summary_rw: true, grid_rw: true, adj_unadj: true },
+				 { key: 'fc4', label: 'PIPELINE', summary_rw: false, grid_rw: false },
+				 { key: 'fc5', label: 'MONTHLY EXIT 1', summary_rw: false, grid_rw: false },
+				 { key: 'fc6', label: 'MONTHLY EXIT 2', summary_rw: false, grid_rw: false },
+				 { key: 'fc7', label: 'LICENCE AMT', summary_rw: false, grid_rw: true },
+				 { key: 'fc8', label: 'RENEWAL AMT', summary_rw: false, grid_rw: true },
+				 { key: 'fc9', label: 'STAGE AMT', summary_rw: false, grid_rw: true },
+				 { key: 'fc10', label: 'CUST AMT 1', summary_rw: false, grid_rw: true },
+				 { key: 'fc11', label: 'CUST AMT 2', summary_rw: false, grid_rw: true },
+				 { key: 'fc12', label: 'CUST AMT 3', summary_rw: false, grid_rw: true },
+				 { key: 'fc13', label: 'CUST AMT 4', summary_rw: false, grid_rw: true },
+				 { key: 'fc14', label: 'CUST AMT 5', summary_rw: false, grid_rw: true },
+				 { key: 'fc15', label: 'CUST AMT 6', summary_rw: false, grid_rw: true },
+				 { key: 'fc16', label: 'CUST AMT 7', summary_rw: false, grid_rw: true },
+				 { key: 'fc17', label: 'CUST AMT 8', summary_rw: false, grid_rw: true },
+				 { key: 'fc18', label: 'CUST AMT 9', summary_rw: false, grid_rw: true },
+				 { key: 'fc19', label: 'CUST AMT 10', summary_rw: false, grid_rw: true },
+				 { key: 'fc20', label: 'CUST AMT 11', summary_rw: false, grid_rw: true },
+				 { key: 'fc21', label: 'CUST AMT 12', summary_rw: false, grid_rw: true },
+				 { key: 'fc22', label: 'CUST AMT 13', summary_rw: false, grid_rw: true },
 				 { key: 'rarrow', label: '\u276F', fmt: 'str'}
 			],
 			data: [
@@ -161,14 +188,15 @@
 			]
     	};
     	
-    	for (var n = 0; n < 101; n++) {
+    	for (var n = 0; n < 10000; n++) {
     		var r = Math.random();
-    		model.data.push([ 'LongHierarchy Level Name ' + n, r*5000000, /*r*10000000,*/ [r*10000000, r*9000000, r*12000000], '',
+    		model.data.push([ ['LongHierarchy Level Name ' + n, [['fc1', '2016-04-26', 'me'],['fc2', '2016-04-25', 'me']['fc3', '2016-04-25', 'me']]] , r*5000000, /*r*10000000,*/ [r*10000000, r*9000000, r*12000000], '',
     		                  r*10000000, [r*10000000, r*9000000, r*10200000], [r*1000000, r*900000, r*1200000], [r*1500000, r*1200000, r*1800000],
     		                  r*2000000, r*2000000,r*200340000, r*1340000, r*13402389000, r*134450000,r*134450000,r*134450000,
     		                  r*134450000,r*134450000,r*134450000,r*134450000,r*134450000,r*134450000,r*134450000,r*134450000,
     		                  r*134450000,r*134450000,r*134450000,'']);
     	}
+    	
     	for (var col = 0, nCol = model.schema.length; col < nCol; col++) {
     		var t = 0;
     		for (var r = 1, rLen = model.data.length; r < rLen; r++) {
@@ -188,33 +216,22 @@
     	}
     	
     	model.summary = model.data.shift();
-    	    	
+    	
     	var money = function(n) {
     		return typeof(n) === 'string'? n : n.toFixed(0).replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1,");
     	}, cellStyle = function(cell) {
     		return (cell.key.match(/arrow/) ? 'col arrow' : 'col') + ' ' + cell.key;
     	}, cellAttrs = function(cell, isHeader, cellindex) {
     		var larrow = cell.key.match(/larrow/), rarrow = cell.key.match(/rarrow/), 
-    			a = {'class': (larrow || rarrow ? 'col arrow' : 'col') + ' ' + cell.key};
-    		if (cell.sid) {
-    			// Scrollable cell.
-    			a['data-sid'] = cell.sid;
-    			if (cell.sid > stop_sid) {
-    				a['hidden'] = '';
-    			}
-    		}
-    		if (larrow) {
-    			a['data-curr-sid'] = 0;
-    		} else if (rarrow) {
-    			a['data-curr-sid'] = curr_sid;
-    			a['data-max-sid'] = max_sid;
-    			a['data-action'] = 'scroll';
-    			a['data-scrollable']=true;
+    			a = {'class': (larrow || rarrow ? 'col arrow' : 'col') + ' ' + cell.key, 'data-colindex': cellindex};
+    		if (cellindex >= scrollFrom && !(larrow||rarrow) && (cellindex < currentScroll || cellindex >= currentScroll+visibleCols)) {
+       			// Scrollable cell.
+       			a['hidden'] = '';	
     		}
     		if (isHeader) {
-				a['data-colindex'] = cellindex;
     			if (larrow||rarrow) {
     				a['data-action'] = 'scroll';
+    				a['data-scrollable'] = larrow && currentScroll === scrollFrom || rarrow && currentScroll+visibleCols === maxScroll ? 'false' : 'true';
     			} else if ('sorted' in cell) {
     				a['class'] += cell.sorted === -1 ? ' south' : ' north';
     				a['data-action'] = 'sort';
@@ -222,6 +239,9 @@
     				a['class'] += ' north';
     				a['data-action'] = 'sort';
     			}
+    		}
+    		if (cell.key === 'name') {
+    			a['class'] += ' flexy-row';
     		}
     		return a;
     	 }, cleanFloat = function(val) {
@@ -322,7 +342,12 @@
 				)
 			} else {
 				// Normal field; could be text or numeric.
-				var repr = schema.fmt !== 'str' ? Elm('input', inputAttrs(data, rw, 0, rowindex, cellindex))() : money2(data);
+				var datum = data instanceof Array ? data[0] : data, 
+					repr = schema.fmt !== 'str' ? Elm('input', inputAttrs(datum, rw, 0, rowindex, cellindex))() : 
+						schema.key === 'name' ? Elm('span')(
+								[Elm('img', {'src': 'fm_history.png', 'class': 'hand', 'data-rowindex': rowindex, 'data-colindex': cellindex,
+									'data-action': 'showHistory'})(), Elm('span')(money2(datum))])
+								: money2(datum);
 				return Elm('div', cellAttrs(schema, false, cellindex))(repr)
 			}
 		};
@@ -393,45 +418,17 @@
     	    // Left and right scrollers.
     	    'scroll': function(e) {
     	    	if (!'data-scrollable' in e.target.attributes) { return; }
-    	    	var lScroll = e.target.attributes['class'].value.indexOf('larrow') >= 0,
-    	    		sid = parseInt(e.target.attributes['data-curr-sid'].value);
+    	    	var lScroll = e.target.attributes['class'].value.indexOf('larrow') >= 0;
     	    	if (lScroll) {
-    	    		var rarrow = document.querySelector('div.row.header .rarrow');
-    	    		if (--sid <= 0) {
-    	    			e.target.removeAttribute('data-scrollable');
-    	    		} 
-    	    		if (sid >= 0) {
-    	    			e.target.attributes['data-curr-sid'].value=sid;
-    	    			if (rarrow) {
-        	    			var rsid = parseInt(rarrow.attributes['data-curr-sid'].value);
-        	    			rarrow.setAttribute('data-scrollable', true);
-        	    			rarrow.attributes['data-curr-sid'].value=rsid-1;
-        	    		}
-    	    			curr_sid = sid;
-    	    			//requestAnimationFrame(function() {
-    	    				toggle(sid, false); toggle(sid+stop_sid+1, true);
-    	    			//})
+    	    		if (--currentScroll <= scrollFrom) {
+    	    			currentScroll = scrollFrom;
     	    		}
     	    	} else {
-    	    		var larrow = document.querySelector('div.row.header .larrow'), 
-    	    			maxid = parseInt(e.target.attributes['data-max-sid'].value);
-		    		if (++sid >= maxid) {
-		    			e.target.removeAttribute('data-scrollable');
-		    		}
-		    		if (sid <= maxid) {
-		    			e.target.attributes['data-curr-sid'].value=sid;
-		    			if (larrow) {
-			    			var lsid = parseInt(larrow.attributes['data-curr-sid'].value);
-			    			larrow.setAttribute('data-scrollable', true);
-			    			larrow.attributes['data-curr-sid'].value=lsid+1;
-			    		}
-		    			curr_sid = sid;
-		    			//requestAnimationFrame(function() {
-		    				toggle(sid, false); toggle(sid-(stop_sid+1), true);
-    	    			//})
-		    		}
+    	    		if (++currentScroll + visibleCols  >= maxScroll) {
+    	    			currentScroll = maxScroll-visibleCols;
+    	    		}
     	    	}
-
+				paint();
     	    },
     	    'more': function(e) {
     	    	page++;
@@ -463,6 +460,35 @@
         	  	
           	    model.data[rid][cid][0] = model.data[rid][cid][1];
 
+           	},
+           	'showHistory': function(e) {
+          	    var cid = parseInt(e.target.attributes['data-colindex'].value),
+          	    	rid = parseInt(e.target.attributes['data-rowindex'].value),
+          	    	src = e.target.getAttribute('src'),
+          	    	history = model.data[rid][cid],
+          	    	pop = document.querySelector('.pop');
+          	    if (src.match(/fm_history/)) {
+          	    	if (!pop) {
+          	    		pop = Elm('div', {'class': 'pop flexy-col', 'style': 'width: 400px; height: 150px;'})(
+          	    			[
+								Elm('div', {'class': 'hdr'})('LAST UPDATED'),
+								Elm('div', {'class': 'flexy-row'})(
+								)
+          	    			]
+						)
+          	    		document.body.appendChild(pop);
+          	    		pop = document.querySelector('.pop');
+          	    	}
+      	    		pop.style.left=(e.clientX+12)+'px';
+      	    		pop.style.top=(e.clientY)+'px';
+      	    		e.target.setAttribute('src', 'close.png');
+          	    } else {
+          	    	e.target.setAttribute('src', 'fm_history.png');
+          	    	if (pop) {
+          	    		pop.parentNode.removeChild(pop);
+          	    	}
+          	    }
+          	    	
            	}
     	});
     	

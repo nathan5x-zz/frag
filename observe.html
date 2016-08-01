@@ -1,0 +1,39 @@
+<html>
+	<head>
+		<title>test</title>
+		<script src="observe.js"></script>
+	</head>
+	<body>
+	
+		<div><u>Test normal</u>:</div>
+		<input type="text" ?val="normal">
+		<div>?{normal}</div>
+		<br>
+		<div><u>Test sub-object</u>:</div>
+		<input type="text" ?val="sub.val">
+		<div>?{sub.val}</div>
+		<br>
+		<div><u>Test specials</u>:</div>
+		<div ?if="show">Show</div>
+		<div ?style="style">Blue</div>
+		<div ?html="html"></div>
+		<br>
+		<div><u>Test eval</u>:</div>
+		<div>1 + (1 x 2) = ?{cnt+(cnt*2)}</div>
+		<br>
+		<div><u>Test loop for</u>:</div>
+		<div ?for="key,val in table">test for ?{key}: pepette ?{val}</div>
+		<br>
+		<div><u>Test on</u>:</div>
+		<div>Nb click: ?{nbClick}</div>
+		<button ?onclick="nbClick+=1">Click</button>
+	</body>
+	<script>
+		var scope = {normal:"pepette", sub:{val:"petouille"}, show:true, style:"color:blue", html:"pou<b>let</b>", cnt:1, table:['v0','v1','v2'], nbClick:0};
+		Bind(document.body, scope);
+		
+		scope.table.push('v3');
+		scope.table.push('v4');
+		scope.table.splice(3,1);
+	</script>
+</html>

@@ -1,0 +1,18 @@
+<html>
+<head>
+ <script type='text/javascript' src='dabi.js'></script>
+</head>
+
+<body>
+  <p class='main'></p>
+ <br/>
+  <input class='new' type='text'>
+
+  <script type='text/javascript'>
+    var myContent = {'newContent': 'world'}
+    DaBi('p.main', myContent, 'newContent', true) // data-to-DOM binding example
+    DaBi('input.new', myContent, 'newContent', true) 
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,80 @@
+<!doctype html>
+<html class = "no-js"> <!--<![endif]-->
+	<head>
+		<meta charset = "utf-8">
+		<meta http-equiv = "X-UA-Compatible" content = "IE=edge">
+		<title>databind</title>
+		<meta name = "description" content = "A sample description">
+		<meta name = "viewport" content = "width=device-width, initial-scale=1">
+	</head>
+	<body>
+		<div class="container">
+			<div class="test" style="width: 200px; margin: 0 auto; text-align: center;">
+				<div data-bind-init="init">
+					<div data-bind="name"></div> и я работаю <div data-bind="oc"></div>
+					<br/>
+					<input type="text" data-bind="oc"/>
+					<div data-bind-show="show" style="display: none">Now u see me</div>
+					<div data-bind-hide="hide">Now can't u see me</div>
+					<div data-bind-click="click">Click me!</div>
+
+					<div data-bind-repeat="array" data-bind="test">
+						<!--<div data-bind="test"></div>-->
+					</div>
+
+					<div>
+						<select name="test" id="test" data-bind="select">
+							<option value="{{val}}" data-bind-repeat="options" data-bind="name">Выберите элемент</option>
+						</select>
+					</div>
+				</div>
+			</div>
+		</div>
+		<script src="binder.js"></script>
+
+		<script>
+			(function () {
+				var RenataController = function () {
+//					this.name = '';
+					this.oc = 'Designer';
+					this.show = true;
+					this.hide = true;
+
+					this.array = [{
+						test: 'test'
+					}, {
+						test: 'test1'
+					}];
+
+					this.options = [{
+						name: 'one',
+						value: 0
+					}, {
+						name: 'two',
+						value: 1
+					}];
+					this.select = '';
+
+
+//					for (var i = 0; i < 100; i++) {
+//						this.array.push(i);
+//					}
+
+					this.init = function () {
+						this.name = 'Renata Izmailova';
+//						this.oc = 'Designer';
+					};
+
+					this.click = function () {
+						alert('Hello!');
+					};
+				};
+
+				this.renata = new RenataController();
+
+				this.db = new DataBinder(this.renata, $('.test'));
+
+			})();
+		</script>
+	</body>
+</html>

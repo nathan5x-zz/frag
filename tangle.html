@@ -1,0 +1,189 @@
+<html>
+<head>
+<script type='text/javascript' src='el.df.js'></script>
+<script type='text/javascript' src='tangle.js'></script>
+
+<style type='text/css'>
+
+	html {
+	  box-sizing: border-box;
+	}
+	*, *:before, *:after {
+	  box-sizing: inherit;
+	}
+	
+	body {
+		font-family: 'Gotham Book', sans-serif;
+		background-color: rgb(250,250,250);
+		padding: 0;
+		margin: 8em 2em 2em 1em;
+		line-height: 1.5em;
+	}
+	img {
+		padding-right: 4px;
+		vertical-align: middle;
+	}
+	.canvas {
+	   border: 1px solid rgb(229,229,229);
+	   background: rgb(239,239,239);
+	   margin-bottom: 3px;
+	   color: rgb(131,131,131);
+	   font-size: .75em;
+	}
+	.canvas.body {
+		max-height: 30em; overflow-y: auto;
+	}
+	
+	.row {width:100%;display:table;table-layout:fixed; border-spacing: 1px;}
+	.col {display: table-cell; padding: 0.5em 1em 0.5em 1em; background: #fff; text-align: right; }
+	.col.nospace {
+		padding: 0;
+	}
+	.col.arrow {
+	  width: 1.2em;text-align: center; padding: 0;
+	}
+	.row.header .col {
+	  background: rgb(245,245,245);
+	}
+	.row.header .col.arrow {
+	  color: #c0c0c0;
+	}
+	.row.header .col.arrow[data-scrollable=true] {
+	  background: #000; color: #fff; cursor: pointer;
+	}
+	.row.body .col.name {
+		color: rgb(35,147,224);
+	}
+	*[hidden] {
+		display: none;
+	}	
+	input, select, textarea, button{font-family:inherit; font-size: inherit;}  
+	input {
+	    width: 100%; outline: none; text-align: right; border: none; border-bottom: 1px solid #fff; color: rgb(66,66,66);
+	    line-height: 1.5em; padding-bottom: 4px;
+	}
+	input.adj {
+		width: calc(100% - 24px);
+	}
+	input[readonly] {
+		color: inherit;
+	}
+	input:not([data-index='0']) {
+		//font-size: .8em;
+	}
+	
+	input:hover:not([readonly]), input:focus:not([readonly]) {
+	    border-bottom: 1px dashed rgb(125,190,238);
+	    cursor: url(pencil.png?1), auto;
+	}
+	input:not(:focus) {
+	    
+	}
+	input[data-state=saved] {
+		color: #31a354;
+	}
+	input[data-state=saved]:after {
+		content="\2713";
+		color: #31a354;
+	}
+	span.sorter {
+		padding-left: 2px;
+		color: rgb(35,147,224);
+	}
+	.hand {
+		cursor: pointer;
+	}
+	.north {
+		cursor: n-resize;
+	}
+	.south {
+		cursor: s-resize;
+	}
+	.flexy-row {
+		display: flexbox;
+		flex-direction: row;
+	}
+	.flexy-col {
+		display: flexbox;
+		flex-direction: column;
+	}
+	.pop {
+		position: absolute;
+		background-color: rgba(254,254,254,.9);
+		border:1px solid rgb(215,215,215);
+		-moz-box-shadow: 1px 1px 1px rgba(0,0,0,0.2);
+		-webkit-box-shadow: 1px 1px 1px rgba(0,0,0,0.2);
+		box-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+		-webkit-border-radius: 3px;
+		-moz-border-radius: 3px;
+		border-radius: 3px;
+		pointer-events:all;
+		max-height: 200px;
+		overflow: auto;
+		font-size: .75em;
+	}
+	.pop .hdr {
+		background-color: rgb(245,245,245);
+		padding: 4px 0 4px 10px;
+	}
+</style>
+</head>
+
+<body>
+	<div class='grid'>
+		<div class='canvas'>
+			<div class='row header'>
+			</div>
+		</div>
+		<div class='canvas body'>
+		
+		</div>
+	</div>
+	
+<p id="calorieCalculator">
+  When you eat <span data-var="cookies"> cookies</span>,
+  you consume <b data-var="calories"> calories</b>. That's 
+  <span data-var="dailyPercent">%</span> of your recommended daily calories.</p>
+
+<script type='text/javascript'>
+	
+	Tangle.classes.GridHeader = {
+	    initialize: function (element, options, tangle, headerData) {
+	        element.onclick = function () {
+	            var value = tangle.getValue(variable);
+	            tangle.setValue(variable, value + 1);
+	        };
+	    },
+	    update: function (element, value) {
+	        element.style.width = "" + value + "px";
+	    }
+	}
+var tangle = new Tangle (document.querySelector('.grid'), {
+    initialize: function () {
+    	this.model = {
+    			headers: ['Name', 'Plan', 'Aviso Forecast', 'Booked', 'Commit', 'Most Likely', 'Best Case'],
+    			data: []
+    	}
+    	for (var d = 0; d < 10; d++) {
+    		this.model.data.push(['Name-'+d, 500000, 450000, 100000, 250345, 450123, 560000]);
+    	}
+    },
+    update: function () {
+        
+    },
+    createHeader: function(headerData) {
+    	this.header = new Tangle (document.querySelector('.row.header'), {
+    		initialize: function() {
+    			this.headerData = headerData;
+    		},
+    		update: function() {
+    			
+    		}
+    	});
+    }
+});
+</script>
+
+</body>
+
+</html>

@@ -1,0 +1,36 @@
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <title>bindside.js</title>
+  </head>
+  <body>
+    <div class="container">
+      <input type="text" data-bs-prop="firstName"> 
+      <input type="text" data-bs-prop="lastName">
+      <h1 data-bs-prop="fullName"></h1>
+      <button type="button" data-bs-action="click::upcaseFirstName">UPCASE First Name</button>
+      <button type="button" data-bs-action="click::reverseLastName">REVERSE Last Name</button>
+    </div>
+    <script src="bindside.js" type="text/javascript"></script>
+    <script type="text/javascript">
+      (function() {
+        window.VM = bindside.createViewModel('.container', function(vm) {
+          // Set view model properties
+          vm.prop('firstName'); 
+          vm.prop('lastName'); 
+          vm.prop('fullName', function() {
+            return this.firstName() + ' ' + this.lastName();
+          });
+          vm.action('reverseLastName', function() {
+            this.lastName(this.lastName().split('').reverse().join('')); 
+          });
+          vm.action('upcaseFirstName', function() {
+            this.firstName(this.firstName().toUpperCase()); 
+          });
+          // Provide model
+          vm.model({ firstName: 'Bob', lastName: 'Sacamano' });
+        });
+      })();
+    </script>
+  </body>
+</html>

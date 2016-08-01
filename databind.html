@@ -1,0 +1,303 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+	<style>
+		html {
+	  box-sizing: border-box;
+	}
+	*, *:before, *:after {
+	  box-sizing: inherit;
+	}
+	
+	body {
+		font-family: 'Gotham Book', sans-serif;
+		background-color: rgb(250,250,250);
+		padding: 0 20px 0 20px;
+		margin: 8em 2em 2em 1em;
+		line-height: 1.5em;
+	}
+	img {
+		padding-right: 4px;
+		vertical-align: middle;
+	}
+	.canvas {
+	   border: 1px solid rgb(229,229,229);
+	   background: rgb(239,239,239);
+	   margin-bottom: 3px;
+	   padding: 0;
+	   color: rgb(131,131,131);
+	   font-size: .75em;
+	}
+	.canvas.body {
+		max-height: 30em; overflow-y: auto;
+	}
+	
+	.row {width:100%;display:table;table-layout:fixed; border-spacing: 1px;}
+	.col {display: table-cell; padding: 0.5em 1em 0.5em 1em; background: #fff; text-align: right; }
+	.col.nospace {
+		padding: 0;
+	}
+	.col.hname {
+		height: 87px;
+	}
+	.col.hname2 {
+		height: 91px;
+	}
+	.col.arrow {
+	  width: 1.2em;text-align: center; padding: 0;
+	}
+	.row.header .col {
+	  background: rgb(245,245,245);
+	}
+	.row.header .col.arrow {
+	  color: #c0c0c0;
+	}
+	.row.header .col.arrow[data-scrollable=true] {
+	  background: #000; color: #fff; cursor: pointer;
+	}
+	.row.body .col.name {
+		color: rgb(35,147,224);
+	}
+	
+	*[hidden] {
+		display: none;
+	}	
+	input, select, textarea, button{font-family:inherit; font-size: inherit;}  
+	input {
+	    width: 100%; outline: none; text-align: right; border: none; border-bottom: 1px solid #fff; color: rgb(66,66,66);
+	    line-height: 1.5em; padding-bottom: 4px;
+	}
+	input.adj {
+		width: calc(100% - 24px);
+	}
+	input[readonly] {
+		color: inherit;
+	}
+	input:not([data-index='0']) {
+		//font-size: .8em;
+	}
+	
+	input:hover:not([readonly]), input:focus:not([readonly]) {
+	    border-bottom: 1px dashed rgb(125,190,238);
+	    cursor: url(pencil.png?1), auto;
+	}
+	input:not(:focus) {
+	    
+	}
+	input[data-state=saved] {
+		color: #31a354;
+	}
+	input[data-state=saved]:after {
+		content="\2713";
+		color: #31a354;
+	}
+	span.sorter {
+		padding-left: 2px;
+		color: rgb(35,147,224);
+	}
+	.hand {
+		cursor: pointer;
+	}
+	.north {
+		cursor: n-resize;
+	}
+	.south {
+		cursor: s-resize;
+	}
+	.flexy-row {
+		display: flexbox;
+		flex-direction: row;
+	}
+	.flexy-col {
+		display: flexbox;
+		flex-direction: column;
+	}
+	.pop {
+		position: absolute;
+		background-color: rgba(254,254,254,.9);
+		border:1px solid rgb(215,215,215);
+		-moz-box-shadow: 1px 1px 1px rgba(0,0,0,0.2);
+		-webkit-box-shadow: 1px 1px 1px rgba(0,0,0,0.2);
+		box-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+		-webkit-border-radius: 3px;
+		-moz-border-radius: 3px;
+		border-radius: 3px;
+		pointer-events:all;
+		max-height: 200px;
+		overflow: auto;
+		font-size: .75em;
+	}
+	.col.pillar {
+		width: 80px;
+	}
+	.col.noscroll {
+		width: 120px;
+		position: absolute; left: 20px;
+	}
+	.col.dynamic {
+		position: absolute; left: 144px;
+		width: 1000px;
+		overflow-x: auto;
+	}
+	.pop .hdr {
+		background-color: rgb(245,245,245);
+		padding: 4px 0 4px 10px;
+	}
+	
+	</style>
+	<script src="databind.js"></script>
+	<script>
+		var model = {
+				pillars: [ 'ITOM','ADM', 'Fortify', 'Haven'/*, 'Atalla', 'ArcSight', 'ECM', 'AE', 'DataProtection', 'Vertica', 'IDOL', 'Voltage'*/],
+				headers: ['Name', 'Forecast', 'Worst Case', 'Best Case', '% of Target', 'Forecast to Go'],
+				summ: [],
+				data: [],
+				pillarData: []
+			}, hLen = model.headers.length, staticCols = 1, pLen = model.pillars.length;
+		
+		for (var d = 0; d < 10; d++) {
+			var row = ['Name-'+d];
+			for (var c = 0; c < hLen-1; c++) {
+				row.push(Math.random()*1500000);
+				if (d === 0 && c < pLen) {
+					model.pillarData.push(Math.random()*100000);
+				}
+			}
+			model.data.push(row);
+		}
+
+		model.summ = model.data[0].slice(0);
+		
+		var money = function(n) {
+			try {
+				var f = parseFloat(n);
+				if (!isNaN(f)) {
+					return '$'+f.toFixed(0).replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1,")
+				}
+			} catch(e) {
+				
+			}
+    		return n;
+    	},
+    	cleanFloat = function(val) {
+			if (typeof(val) !== 'string') { 
+				return parseFloat(val.toFixed(0));	
+			}
+			var cleaned = val.replace(/\<br\>/g, ''), shortened = cleaned.match(/[KMB]$/i),
+				isNeg = cleaned.match(/^\-|^[^0-9]+\-/), 
+				f = parseFloat(cleaned.replace(/\D/g, ''));
+			if (shortened) {
+				var m = {'k': 1000, 'm': 1000*1000, 'b': 1000*1000*1000};
+				f *= m[shortened[0].toLowerCase()];
+			}
+			return isNaN(f) ? 0 : isNeg ? -f : f;
+    	},
+    	update = function(val, row, col) {
+    		var curr = model.data[row][col];
+    		model.data[row][col] = cleanFloat(val);
+    		model.summ[model.summ.length-1] = cleanFloat(model.summ[model.summ.length-1]) + (model.data[row][col]-curr);
+    	},
+    	sort_col = 1,
+    	sort = function(col) {
+    		var order = col === sort_col ? -1 : 1;
+    		model.data.sort(function(a,b) {
+    			return (cleanFloat(a[col]) - cleanFloat(b[col])) * order;
+    		});
+    		sort_col = col;
+    	},
+    	save = function(val) {
+    		console.log(val + ' saved.')
+    	}
+	</script>
+</head>
+<body>
+	<h1>Forecasts</h1>
+	<div class='row parent' style='height: 300px; overflow-x:hidden; overflow-y:auto;'>
+		<div class='col nospace noscroll'>
+		
+			<div class='canvas'>
+				<div class='row header'>
+					<div class='col hname' bind-repeater-i="#staticCols" 
+						bind-event-click="sort(#i)">{{#model.headers[#i]}}</div>
+				</div>
+				<div class='row'>
+					<div class='col hname2' bind-repeater-si="#staticCols">
+						<input type='text' bind-statement-s='thisElem.value = money(#model.summ[#si])'
+							bind-event-change="save(#model.summ[#si])">
+					</div>
+				</div>
+			</div>
+			<div class='canvas'>
+				<div class='row' bind-repeater-r="#model.data.length" >
+					<div class='col hname' bind-repeater-c="#staticCols" >
+						<input type='text' bind-statement-1='thisElem.value = money(#model.data[#r][#c])' 
+							bind-statement-2='thisElem.readonly = (#c === 0 ? "readonly" : null)'
+							bind-event-change="update(thisElem.value, #r, #c) ">
+					</div>
+				</div>
+			</div>
+			
+		</div>
+		
+		<div class='col nospace dynamic'>
+		
+			<div class='canvas' style='width: 2000px;'>
+				<div class='row header'>
+					<div class='col' bind-repeater-i="#model.headers.length-#staticCols" 
+						bind-event-click="sort(#i+#staticCols)">
+						<div class='row'>
+							<div class='col'>{{#model.headers[#i+#staticCols]}}</div>
+						</div>
+						<div class='row'>
+							<div class='col pillar' bind-repeater-p="#model.pillars.length">
+								{{#model.pillars[#p]}}
+							</div>
+						</div>
+						
+					</div>
+				</div>
+				<div class='row'>
+					<div class='col' bind-repeater-si="#model.summ.length-#staticCols">
+						<div class='row'>
+							<div class='col'>
+								<input type='text' bind-statement-s='thisElem.value = money(#model.summ[#si+#staticCols])'
+									bind-event-change="save(#model.summ[#si+#staticCols])">
+							</div>
+						</div>
+						<div class='row'>
+							<div class='col pillar' bind-repeater-p="#model.pillars.length">
+								<input type='text' bind-statement-s='thisElem.value = money(#model.pillarData[#p])'>
+							</div>
+						</div>
+						
+					</div>
+				</div>
+			</div>
+			<div class='canvas' style='width: 2000px;'>
+				<div class='row' bind-repeater-r="#model.data.length" >
+					<div class='col' bind-repeater-c="#model.data[#r].length-#staticCols" >
+						<div class='row'>
+							<div class='col'>
+								<input type='text' bind-statement-1='thisElem.value = money(#model.data[#r][#c+#staticCols])' 
+									bind-statement-2='thisElem.readonly = (#c+#staticCols === 0 ? "readonly" : null)'
+									bind-event-change="update(thisElem.value, #r, #c+#staticCols) ">
+							</div>
+						</div>
+						<div class='row'>
+							<div class='col pillar' bind-repeater-p="#model.pillars.length">
+								<input type='text' bind-statement-s='thisElem.value = money(#model.pillarData[#p])'>
+							</div>
+						</div>
+					
+					</div>
+				</div>
+			</div>
+			
+		</div>
+		
+	</div>
+	
+</body>
+</html>
+

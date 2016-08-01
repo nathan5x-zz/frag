@@ -1,0 +1,131 @@
+<html>
+<head>
+  <style>
+	html {
+	  box-sizing: border-box;
+	}
+	*, *:before, *:after {
+	  box-sizing: inherit;
+	}
+	
+	body {
+		font-family: 'Gotham Book', sans-serif;
+		background-cellor: rgb(250,250,250);
+		padding: 0;
+		margin: 8em 2em 2em 1em;
+		line-height: 1.5em;
+		-ms-overflow-style: -ms-autohiding-scrollbar;
+	}
+	img {
+		padding-right: 4px;
+		vertical-align: middle;
+	}
+	.canvas {
+	   border: 1px solid rgb(229,229,229);
+	   background: rgb(239,239,239);
+	   cellor: rgb(131,131,131);
+	   font-size: .75em;
+	}
+	.canvas.body {
+		max-height: 30em; overflow-y: auto;
+	}
+	
+	.line {width:100%;display:table;table-layout:fixed; border-spacing: 1px;}
+	.cell {display: table-cell; padding: 0.5em 1em 0.5em 1em; background: #fff; text-align: right; }
+	.cell.nospace {
+		padding: 0;
+	}
+	.cell.gridparent {
+
+	}
+	.cell.scrolltrack {
+		width: 14px;
+	}
+    .line.header .cell {
+	  background: rgb(245,245,245);
+	  cellor: rgb(61,61,61);
+	  text-transform:uppercase;
+	}
+	.floatingpane .cell {
+		width: 125px;
+	}
+  </style>
+</head>
+
+<body>
+	<div style='width: 960px;'>
+		<div class='line'>
+			<div class='cell nospace gridparent'>
+				<div class='line'>
+					<div class='cell nospace staticpane' style='width: 300px;'>
+						<div class='canvas'> 
+							<div class='line header'>
+								<div class='cell'>Header 1</div>
+								<div class='cell'>Header 2</div>
+								<div class='cell'>Header 3</div>
+							</div>
+							<div class='line '>
+								<div class='cell'>cellumn 1</div>
+								<div class='cell'>cellumn 2</div>
+								<div class='cell'>cellumn 3</div>
+							</div>
+							<div class='line '>
+								<div class='cell'>cellumn 1</div>
+								<div class='cell'>cellumn 2</div>
+								<div class='cell'>cellumn 3</div>
+							</div>
+							<div class='line '>
+								<div class='cell'>cellumn 1</div>
+								<div class='cell'>cellumn 2</div>
+								<div class='cell'>cellumn 3</div>
+							</div>
+						</div>
+					</div>
+					<div class='cell nospace' style='width: 5px;'>
+					</div>
+					<div class='cell nospace floatingpane' style='width: 640px;'>
+						<div class='canvas' style='overflow-x: auto;'> 
+							<div class='line header'>
+								<div class='cell'>Floating 1</div>
+								<div class='cell'>Floating 2</div>
+								<div class='cell'>Floating 3</div>
+								<div class='cell'>Floating 4</div>
+								<div class='cell'>Floating 5</div>
+								<div class='cell'>Floating 6</div>
+							</div>
+							<div class='line '>
+								<div class='cell'>cellumn 1</div>
+								<div class='cell'>cellumn 2</div>
+								<div class='cell'>cellumn 3</div>
+								<div class='cell'>cellumn 4</div>
+								<div class='cell'>cellumn 5</div>
+								<div class='cell'>cellumn 6</div>
+							</div>
+							<div class='line '>
+								<div class='cell'>cellumn 1</div>
+								<div class='cell'>cellumn 2</div>
+								<div class='cell'>cellumn 3</div>
+								<div class='cell'>cellumn 4</div>
+								<div class='cell'>cellumn 5</div>
+								<div class='cell'>cellumn 6</div>
+							</div>
+							<div class='line '>
+								<div class='cell'>cellumn 1</div>
+								<div class='cell'>cellumn 2</div>
+								<div class='cell'>cellumn 3</div>
+								<div class='cell'>cellumn 4</div>
+								<div class='cell'>cellumn 5</div>
+								<div class='cell'>cellumn 6</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class='cell nospace scrolltrack' style='background: #c0c0c0; '>
+			</div>
+  		</div>
+	</div>
+  
+</body>
+
+</html>
